@@ -5,19 +5,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
-import { mockCoins, chains, formatKRW, type CoinData, type ChainInfo } from "@/lib/cryptoData";
+import { chains, formatKRW, type CoinData, type ChainInfo } from "@/lib/cryptoData";
+import { useCryptoData } from "@/hooks/useCryptoData";
+import AnimatedPage from "@/components/AnimatedPage";
 import { toast } from "@/hooks/use-toast";
 
 const DAILY_RATE = 0.001; // 0.1% / day
 const TERM_DAYS = 30;
 
 const LendingPage = () => {
+  const { data: coins = [] } = useCryptoData();
   const [selectedChain, setSelectedChain] = useState<ChainInfo | null>(null);
   const [selectedCoin, setSelectedCoin] = useState<CoinData | null>(null);
   const [amount, setAmount] = useState(50);
   const [confirmed, setConfirmed] = useState(false);
 
-  const filteredCoins = selectedChain ? mockCoins.filter((c) => c.chain === selectedChain.id) : mockCoins;
+  const filteredCoins = selectedChain ? coins.filter((c) => c.chain === selectedChain.id) : coins;
 
   const loanKrw = selectedCoin ? amount * selectedCoin.priceKrw / 100 : 0;
   const totalInterest = loanKrw * DAILY_RATE * TERM_DAYS;
@@ -36,6 +39,7 @@ const LendingPage = () => {
   };
 
   return (
+    <AnimatedPage>
     <div className="p-4 md:p-6 max-w-2xl mx-auto space-y-6">
       <h1 className="text-2xl font-bold">암호화폐 대출</h1>
 
@@ -141,6 +145,7 @@ const LendingPage = () => {
         </div>
       )}
     </div>
+    </AnimatedPage>
   );
 };
 

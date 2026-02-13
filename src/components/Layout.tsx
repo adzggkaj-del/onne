@@ -5,9 +5,9 @@ import MobileTabBar from "./MobileTabBar";
 
 const Layout = () => {
   return (
-    <div className="flex min-h-screen w-full bg-background">
+    <div className="flex h-screen w-full bg-background overflow-hidden">
       <AppSidebar />
-      <div className="flex flex-1 flex-col min-w-0">
+      <div className="flex flex-1 flex-col min-w-0 h-screen">
         <TopNav />
         <main className="flex-1 overflow-y-auto pb-20 md:pb-0">
           <Outlet />

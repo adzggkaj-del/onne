@@ -4,12 +4,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { mockCoins, chains, formatKRW, type CoinData, type ChainInfo } from "@/lib/cryptoData";
+import { Skeleton } from "@/components/ui/skeleton";
+import { chains, formatKRW, type CoinData, type ChainInfo } from "@/lib/cryptoData";
+import { useCryptoData } from "@/hooks/useCryptoData";
+import AnimatedPage from "@/components/AnimatedPage";
 import { toast } from "@/hooks/use-toast";
 
 const STEPS = ["주 체인 선택", "코인 선택", "수량 입력", "지갑 주소", "확인"];
 
 const BuyPage = () => {
+  const { data: coins = [] } = useCryptoData();
   const [step, setStep] = useState(0);
   const [selectedChain, setSelectedChain] = useState<ChainInfo | null>(null);
   const [selectedCoin, setSelectedCoin] = useState<CoinData | null>(null);
@@ -17,8 +21,8 @@ const BuyPage = () => {
   const [walletAddress, setWalletAddress] = useState("");
 
   const filteredCoins = selectedChain
-    ? mockCoins.filter((c) => c.chain === selectedChain.id)
-    : mockCoins;
+    ? coins.filter((c) => c.chain === selectedChain.id)
+    : coins;
 
   const numAmount = parseFloat(amount) || 0;
   const krwTotal = selectedCoin ? numAmount * selectedCoin.priceKrw : 0;
@@ -45,6 +49,7 @@ const BuyPage = () => {
   };
 
   return (
+    <AnimatedPage>
     <div className="p-4 md:p-6 max-w-2xl mx-auto space-y-6">
       <h1 className="text-2xl font-bold">코인 구매</h1>
 
@@ -195,6 +200,7 @@ const BuyPage = () => {
         )}
       </div>
     </div>
+    </AnimatedPage>
   );
 };
 

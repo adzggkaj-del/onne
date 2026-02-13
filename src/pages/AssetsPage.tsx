@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { mockCoins, formatKRW } from "@/lib/cryptoData";
+import { formatKRW } from "@/lib/cryptoData";
+import AnimatedPage from "@/components/AnimatedPage";
 import { toast } from "@/hooks/use-toast";
 
 const holdings = [
@@ -39,6 +40,7 @@ const AssetsPage = () => {
   const filteredOrders = orderFilter === "all" ? orders : orders.filter((o) => o.type === orderFilter);
 
   return (
+    <AnimatedPage>
     <div className="p-4 md:p-6 max-w-4xl mx-auto space-y-6">
       {/* User info */}
       <div className="flex items-center gap-4">
@@ -173,6 +175,7 @@ const AssetsPage = () => {
         </div>
       </section>
     </div>
+    </AnimatedPage>
   );
 };
 
