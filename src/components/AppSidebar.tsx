@@ -14,7 +14,7 @@ const AppSidebar = () => {
   const location = useLocation();
 
   return (
-    <aside className="hidden md:flex flex-col w-60 border-r border-border bg-sidebar min-h-screen shrink-0">
+    <aside className="hidden md:flex flex-col w-60 border-r border-border bg-sidebar h-screen shrink-0 sticky top-0">
       {/* Logo */}
       <div className="flex items-center gap-3 px-6 h-16 border-b border-sidebar-border">
         <div className="flex h-9 w-9 items-center justify-center rounded-xl gradient-primary shadow-lg shadow-primary/20">

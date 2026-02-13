@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { mockCoins, chains, formatKRW, type CoinData, type ChainInfo } from "@/lib/cryptoData";
+import { chains, formatKRW, type CoinData, type ChainInfo } from "@/lib/cryptoData";
+import { useCryptoData } from "@/hooks/useCryptoData";
+import AnimatedPage from "@/components/AnimatedPage";
 import { toast } from "@/hooks/use-toast";
 
 const STEPS = ["주 체인 선택", "코인 선택", "수량 입력", "충币 주소", "은행 정보", "확인"];
@@ -28,6 +30,7 @@ const statusConfig: Record<OrderStatus, { label: string; icon: typeof Clock; col
 };
 
 const SellPage = () => {
+  const { data: coins = [] } = useCryptoData();
   const [step, setStep] = useState(0);
   const [selectedChain, setSelectedChain] = useState<ChainInfo | null>(null);
   const [selectedCoin, setSelectedCoin] = useState<CoinData | null>(null);
@@ -38,7 +41,7 @@ const SellPage = () => {
   const [showConfirm, setShowConfirm] = useState(false);
   const [orderStatus, setOrderStatus] = useState<OrderStatus | null>(null);
 
-  const filteredCoins = selectedChain ? mockCoins.filter((c) => c.chain === selectedChain.id) : mockCoins;
+  const filteredCoins = selectedChain ? coins.filter((c) => c.chain === selectedChain.id) : coins;
   const numAmount = parseFloat(amount) || 0;
   const krwTotal = selectedCoin ? numAmount * selectedCoin.priceKrw : 0;
   const fee = krwTotal * 0.001;
@@ -80,6 +83,7 @@ const SellPage = () => {
   };
 
   return (
+    <AnimatedPage>
     <div className="p-4 md:p-6 max-w-2xl mx-auto space-y-6">
       <h1 className="text-2xl font-bold">코인 판매</h1>
 
@@ -265,6 +269,7 @@ const SellPage = () => {
         </DialogContent>
       </Dialog>
     </div>
+    </AnimatedPage>
   );
 };
 
