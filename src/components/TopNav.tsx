@@ -1,7 +1,8 @@
-import { Search, Bell, User, LogOut } from "lucide-react";
+import { Search, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
+import NotificationPanel from "@/components/NotificationPanel";
 import { useNavigate } from "react-router-dom";
 
 const TopNav = () => {
@@ -36,10 +37,7 @@ const TopNav = () => {
 
       {/* Right actions */}
       <div className="flex items-center gap-2">
-        <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-foreground">
-          <Bell className="h-5 w-5" />
-          <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-primary" />
-        </Button>
+        <NotificationPanel />
         
         {user ? (
           <>

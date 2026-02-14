@@ -8,9 +8,11 @@ import { Slider } from "@/components/ui/slider";
 import { chains, formatKRW, type CoinData, type ChainInfo } from "@/lib/cryptoData";
 import { useCryptoData } from "@/hooks/useCryptoData";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserBalance } from "@/hooks/useUserBalance";
 import { supabase } from "@/integrations/supabase/client";
 import AnimatedPage from "@/components/AnimatedPage";
 import CoinIcon from "@/components/CoinIcon";
+import ChainIcon from "@/components/ChainIcon";
 import { toast } from "@/hooks/use-toast";
 
 const DAILY_RATE = 0.001;
@@ -19,6 +21,7 @@ const TERM_DAYS = 30;
 const LendingPage = () => {
   const { data: coins = [] } = useCryptoData();
   const { user } = useAuth();
+  const { data: balance } = useUserBalance();
   const [selectedChain, setSelectedChain] = useState<ChainInfo | null>(null);
   const [selectedCoin, setSelectedCoin] = useState<CoinData | null>(null);
   const [amount, setAmount] = useState(50);
@@ -75,7 +78,7 @@ const LendingPage = () => {
             <Button key={chain.id} variant={selectedChain?.id === chain.id ? "default" : "outline"} size="sm"
               className={selectedChain?.id === chain.id ? "gradient-primary text-primary-foreground" : "border-border/50"}
               onClick={() => { setSelectedChain(chain); setSelectedCoin(null); }}>
-              <span className="mr-1">{chain.icon}</span> {chain.name}
+              <span className="mr-1"><ChainIcon image={chain.image} icon={chain.icon} name={chain.name} size="sm" /></span> {chain.name}
             </Button>
           ))}
         </div>
