@@ -7,18 +7,23 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { chains, formatKRW, type CoinData, type ChainInfo } from "@/lib/cryptoData";
 import { useCryptoData } from "@/hooks/useCryptoData";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import AnimatedPage from "@/components/AnimatedPage";
+import CoinIcon from "@/components/CoinIcon";
 import { toast } from "@/hooks/use-toast";
 
-const DAILY_RATE = 0.001; // 0.1% / day
+const DAILY_RATE = 0.001;
 const TERM_DAYS = 30;
 
 const LendingPage = () => {
   const { data: coins = [] } = useCryptoData();
+  const { user } = useAuth();
   const [selectedChain, setSelectedChain] = useState<ChainInfo | null>(null);
   const [selectedCoin, setSelectedCoin] = useState<CoinData | null>(null);
   const [amount, setAmount] = useState(50);
   const [confirmed, setConfirmed] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const filteredCoins = selectedChain ? coins.filter((c) => c.chain === selectedChain.id) : coins;
 
@@ -26,7 +31,26 @@ const LendingPage = () => {
   const totalInterest = loanKrw * DAILY_RATE * TERM_DAYS;
   const totalRepay = loanKrw + totalInterest;
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
+    if (!user || !selectedCoin || !selectedChain) return;
+    setSubmitting(true);
+    const { error } = await supabase.from("orders").insert({
+      user_id: user.id,
+      type: "lending",
+      coin_id: selectedCoin.id,
+      coin_symbol: selectedCoin.symbol,
+      amount: amount,
+      price_krw: selectedCoin.priceKrw,
+      total_krw: totalRepay,
+      fee_krw: totalInterest,
+      status: "대기",
+      chain: selectedChain.id,
+    });
+    setSubmitting(false);
+    if (error) {
+      toast({ title: "대출 신청 실패", description: error.message, variant: "destructive" });
+      return;
+    }
     setConfirmed(true);
     toast({ title: "대출 신청이 완료되었습니다", description: `상환 금액: ${formatKRW(totalRepay)}` });
   };
@@ -66,7 +90,8 @@ const LendingPage = () => {
               <Button key={coin.id} variant={selectedCoin?.id === coin.id ? "default" : "outline"} size="sm"
                 className={selectedCoin?.id === coin.id ? "gradient-primary text-primary-foreground" : "border-border/50"}
                 onClick={() => setSelectedCoin(coin)}>
-                <span className="mr-1">{coin.icon}</span> {coin.symbol}
+                <CoinIcon image={coin.image} icon={coin.icon} symbol={coin.symbol} size="sm" className="mr-1" />
+                {coin.symbol}
               </Button>
             ))}
           </div>
@@ -130,7 +155,7 @@ const LendingPage = () => {
 
       {/* Action */}
       {selectedCoin && !confirmed && (
-        <Button className="w-full gradient-primary text-primary-foreground hover:opacity-90 h-12 text-base" onClick={handleConfirm}>
+        <Button className="w-full gradient-primary text-primary-foreground hover:opacity-90 h-12 text-base" onClick={handleConfirm} disabled={submitting}>
           <Check className="h-5 w-5 mr-2" /> 대출 신청
         </Button>
       )}

@@ -1,8 +1,18 @@
-import { Search, Bell, User } from "lucide-react";
+import { Search, Bell, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 
 const TopNav = () => {
+  const { user, profile, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
+
   return (
     <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-border bg-background/80 backdrop-blur-xl px-4 md:px-6">
       {/* Logo - visible on mobile */}
@@ -30,13 +40,28 @@ const TopNav = () => {
           <Bell className="h-5 w-5" />
           <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-primary" />
         </Button>
-        <Button variant="ghost" size="sm" className="hidden md:inline-flex text-muted-foreground hover:text-foreground">
-          로그인
-        </Button>
-        <Button size="sm" className="gradient-primary text-primary-foreground hover:opacity-90 transition-opacity">
-          <User className="h-4 w-4 mr-1" />
-          <span className="hidden md:inline">회원가입</span>
-        </Button>
+        
+        {user ? (
+          <>
+            <span className="hidden md:inline text-sm text-muted-foreground">
+              {profile?.username || user.email?.split("@")[0]}
+            </span>
+            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" onClick={handleSignOut}>
+              <LogOut className="h-4 w-4 mr-1" />
+              <span className="hidden md:inline">로그아웃</span>
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button variant="ghost" size="sm" className="hidden md:inline-flex text-muted-foreground hover:text-foreground" onClick={() => navigate("/auth")}>
+              로그인
+            </Button>
+            <Button size="sm" className="gradient-primary text-primary-foreground hover:opacity-90 transition-opacity" onClick={() => navigate("/auth")}>
+              <User className="h-4 w-4 mr-1" />
+              <span className="hidden md:inline">회원가입</span>
+            </Button>
+          </>
+        )}
       </div>
     </header>
   );

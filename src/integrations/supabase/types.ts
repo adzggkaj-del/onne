@@ -14,7 +14,96 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      orders: {
+        Row: {
+          account_holder: string | null
+          account_number: string | null
+          amount: number
+          bank_name: string | null
+          chain: string | null
+          coin_id: string
+          coin_symbol: string
+          created_at: string
+          fee_krw: number
+          id: string
+          price_krw: number
+          status: string
+          total_krw: number
+          type: string
+          user_id: string
+          wallet_address: string | null
+        }
+        Insert: {
+          account_holder?: string | null
+          account_number?: string | null
+          amount: number
+          bank_name?: string | null
+          chain?: string | null
+          coin_id: string
+          coin_symbol: string
+          created_at?: string
+          fee_krw?: number
+          id?: string
+          price_krw: number
+          status?: string
+          total_krw: number
+          type: string
+          user_id: string
+          wallet_address?: string | null
+        }
+        Update: {
+          account_holder?: string | null
+          account_number?: string | null
+          amount?: number
+          bank_name?: string | null
+          chain?: string | null
+          coin_id?: string
+          coin_symbol?: string
+          created_at?: string
+          fee_krw?: number
+          id?: string
+          price_krw?: number
+          status?: string
+          total_krw?: number
+          type?: string
+          user_id?: string
+          wallet_address?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          id: string
+          uid_display: string | null
+          updated_at: string
+          user_id: string
+          username: string | null
+          verified: boolean
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          id?: string
+          uid_display?: string | null
+          updated_at?: string
+          user_id: string
+          username?: string | null
+          verified?: boolean
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          id?: string
+          uid_display?: string | null
+          updated_at?: string
+          user_id?: string
+          username?: string | null
+          verified?: boolean
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
