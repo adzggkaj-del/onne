@@ -1,59 +1,93 @@
 
 
-## CryptoX 优化计划：动画、实时数据、滚动修复
+## CryptoX 升级计划：真实Logo + 用户系统 + 订单数据库
 
-### 1. 修复PC端滚动行为
-**问题**：当前整个页面一起滚动，左侧菜单栏也跟着滚动。
-**方案**：修改 `Layout.tsx`，让侧边栏固定（`sticky top-0 h-screen`），右侧内容区独立滚动（`overflow-y-auto h-screen`）。TopNav 也保持 sticky 在内容区顶部。
+### 1. 币种真实Logo显示
 
-修改文件：`src/components/Layout.tsx`、`src/components/AppSidebar.tsx`
+**问题**：当前所有币种使用文字符号（如 "₿"、"⟠"）显示，不够直观。
 
-### 2. Framer-motion 页面切换动画
-**方案**：创建一个 `AnimatedPage` 包装组件，使用 `framer-motion` 的 `motion.div` + `AnimatePresence`，为每个页面添加淡入+上滑效果。
+**方案**：
+- CoinGecko API 的 `/coins/markets` 接口本身就返回 `image` 字段（币种Logo URL）
+- 修改 `CoinData` 接口，新增 `image` 字段存储真实Logo URL
+- 修改 `useCryptoData.ts`，从API响应中提取 `image` 字段
+- 修改 `mockCoins` fallback 数据，使用静态Logo URL
+- 创建一个 `CoinIcon` 组件，显示 `<img>` 标签，加载失败时 fallback 到文字符号
+- 全局替换所有页面中显示币种图标的地方（Index、BuyPage、SellPage、LendingPage、AssetsPage）
 
-- 创建 `src/components/AnimatedPage.tsx` 组件
-- 在所有5个页面（Index、Buy、Sell、Lending、Assets）外层包裹该组件
-- 动画参数：opacity 0->1 + translateY 12px->0，duration 0.3s
+**涉及文件**：
+- `src/lib/cryptoData.ts` - CoinData 接口增加 image 字段，mockCoins 加默认Logo URL
+- `src/hooks/useCryptoData.ts` - CoinGeckoMarket 接口增加 image 字段并映射
+- `src/components/CoinIcon.tsx` - 新建，统一的币种图标组件
+- 所有5个页面 - 替换文字图标为 CoinIcon 组件
 
-### 3. 价格变化红/绿闪烁高亮
-**方案**：创建一个 `PriceFlash` 组件，当价格变化时短暂闪烁绿色（涨）或红色（跌）背景。
+### 2. 启用 Lovable Cloud + 用户认证
 
-- 创建 `src/components/PriceFlash.tsx`
-- 使用 `useEffect` 监听价格变化，触发CSS动画闪烁
-- 在首页币种列表的价格显示处使用该组件
+**方案**：启用 Lovable Cloud 后，配置 Supabase 认证系统。
 
-### 4. 接入 CoinGecko API 获取实时数据
-**方案**：CoinGecko 提供免费公开 API（无需 API Key），直接从前端调用。
+**数据库表设计**：
 
-- 创建 `src/hooks/useCryptoData.ts` 自定义 Hook，使用 `@tanstack/react-query` 调用 CoinGecko API
-- API端点：`https://api.coingecko.com/api/v3/coins/markets?vs_currency=krw&ids=bitcoin,ethereum,binancecoin,solana,ripple,tron,matic-network,tether&sparkline=true`
-- 返回数据自动带 KRW 价格、24h 涨跌、sparkline 等
-- 价格乘以 1.01 上浮逻辑保留
-- 加载时显示 Skeleton 骨架屏
-- 失败时 fallback 到现有 mockCoins 数据
-- 更新所有引用 `mockCoins` 的页面使用新 Hook
+**profiles 表**（用户资料）：
+- `id` (uuid, PK, 关联 auth.users.id)
+- `username` (text)
+- `avatar_url` (text)
+- `uid_display` (text) - 展示用的UID如 "CX-892741"
+- `verified` (boolean, 默认 false)
+- `created_at` (timestamptz)
 
-### 技术细节
+**orders 表**（订单记录）：
+- `id` (uuid, PK)
+- `user_id` (uuid, 关联 auth.users.id, NOT NULL)
+- `type` (text: 'buy' / 'sell' / 'lending')
+- `coin_id` (text)
+- `coin_symbol` (text)
+- `amount` (numeric)
+- `price_krw` (numeric)
+- `total_krw` (numeric)
+- `fee_krw` (numeric)
+- `status` (text: '대기' / '처리 중' / '완료')
+- `chain` (text)
+- `wallet_address` (text, nullable)
+- `bank_name` (text, nullable)
+- `account_number` (text, nullable)
+- `account_holder` (text, nullable)
+- `created_at` (timestamptz)
 
-**修改文件清单**：
-- `src/components/Layout.tsx` - 修复滚动结构
-- `src/components/AppSidebar.tsx` - 侧边栏 sticky + h-screen
-- `src/components/AnimatedPage.tsx` - 新建，页面过渡动画包装
-- `src/components/PriceFlash.tsx` - 新建，价格闪烁组件
-- `src/hooks/useCryptoData.ts` - 新建，CoinGecko 数据获取 Hook
-- `src/lib/cryptoData.ts` - 添加 CoinGecko 数据映射函数，保留 mockCoins 作为 fallback
-- `src/pages/Index.tsx` - 使用实时数据 + 动画 + 价格闪烁
-- `src/pages/BuyPage.tsx` - 使用实时数据 + 页面动画
-- `src/pages/SellPage.tsx` - 使用实时数据 + 页面动画
-- `src/pages/LendingPage.tsx` - 使用实时数据 + 页面动画
-- `src/pages/AssetsPage.tsx` - 页面动画
+**RLS 策略**：
+- profiles: 用户只能读取和更新自己的资料
+- orders: 用户只能读取和插入自己的订单
 
-**CoinGecko API 数据映射**：
-- `id` -> coin id
-- `current_price` * 1.01 -> priceKrw（API 直接返回 KRW 价格）
-- `current_price / krw_rate` * 1.01 -> priceUsd
-- `price_change_percentage_24h` -> change24h
-- `total_volume` -> volume24h
-- `sparkline_in_7d.price` (取最后24个点) -> sparkline
-- 自动刷新间隔：30秒
+**触发器**：注册时自动创建 profile，生成随机 UID
+
+### 3. 认证页面
+
+**新建文件**：
+- `src/pages/AuthPage.tsx` - 登录/注册页面（邮箱+密码，Tab 切换登录和注册）
+- `src/hooks/useAuth.ts` - 认证状态 Hook（onAuthStateChange + getSession）
+- `src/components/ProtectedRoute.tsx` - 路由保护组件
+
+**路由变更**：
+- `/auth` - 登录/注册页（未登录时可访问）
+- 买卖/借贷/资产页需要登录才能访问
+- 首页保持公开可访问
+- TopNav 显示登录状态，已登录显示用户信息
+
+### 4. 订单存储集成
+
+**修改页面**：
+- `BuyPage.tsx` - 确认购买时将订单写入 orders 表
+- `SellPage.tsx` - 提交卖单时将订单写入 orders 表
+- `LendingPage.tsx` - 确认借贷时将订单写入 orders 表
+- `AssetsPage.tsx` - 从 orders 表读取用户历史订单，替换硬编码数据
+
+### 技术实施顺序
+
+1. 启用 Lovable Cloud
+2. 创建数据库迁移（profiles 表 + orders 表 + RLS + 触发器）
+3. 修改 CoinData 接口和 useCryptoData Hook 支持真实Logo
+4. 创建 CoinIcon 组件并全局替换
+5. 实现 useAuth Hook 和 AuthPage
+6. 创建 ProtectedRoute 并更新路由
+7. 更新 Buy/Sell/Lending 页面写入订单
+8. 更新 Assets 页面读取真实订单数据
+9. 更新 TopNav 显示登录状态
 
