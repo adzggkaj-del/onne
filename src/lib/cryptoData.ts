@@ -19,14 +19,15 @@ export interface ChainInfo {
   id: string;
   name: string;
   icon: string;
+  image: string;
 }
 
 export const chains: ChainInfo[] = [
-  { id: "ethereum", name: "Ethereum", icon: "⟠" },
-  { id: "bsc", name: "BNB Chain", icon: "◆" },
-  { id: "tron", name: "TRON", icon: "◈" },
-  { id: "solana", name: "Solana", icon: "◎" },
-  { id: "polygon", name: "Polygon", icon: "⬡" },
+  { id: "ethereum", name: "Ethereum", icon: "⟠", image: "https://assets.coingecko.com/coins/images/279/small/ethereum.png" },
+  { id: "bsc", name: "BNB Chain", icon: "◆", image: "https://assets.coingecko.com/coins/images/825/small/bnb-icon2_2x.png" },
+  { id: "tron", name: "TRON", icon: "◈", image: "https://assets.coingecko.com/coins/images/1094/small/tron-logo.png" },
+  { id: "solana", name: "Solana", icon: "◎", image: "https://assets.coingecko.com/coins/images/4128/small/solana.png" },
+  { id: "polygon", name: "Polygon", icon: "⬡", image: "https://assets.coingecko.com/coins/images/4713/small/polygon.png" },
 ];
 
 const generateSparkline = (base: number, volatility: number): number[] => {

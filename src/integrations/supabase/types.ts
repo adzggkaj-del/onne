@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          read: boolean
+          related_order_id: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          read?: boolean
+          related_order_id?: string | null
+          title: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          read?: boolean
+          related_order_id?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       orders: {
         Row: {
           account_holder: string | null
@@ -101,6 +134,42 @@ export type Database = {
           user_id?: string
           username?: string | null
           verified?: boolean
+        }
+        Relationships: []
+      }
+      supported_coins: {
+        Row: {
+          chain: string
+          coin_id: string
+          created_at: string
+          enabled: boolean
+          icon: string
+          id: string
+          name_kr: string
+          sort_order: number
+          symbol: string
+        }
+        Insert: {
+          chain: string
+          coin_id: string
+          created_at?: string
+          enabled?: boolean
+          icon?: string
+          id?: string
+          name_kr: string
+          sort_order?: number
+          symbol: string
+        }
+        Update: {
+          chain?: string
+          coin_id?: string
+          created_at?: string
+          enabled?: boolean
+          icon?: string
+          id?: string
+          name_kr?: string
+          sort_order?: number
+          symbol?: string
         }
         Relationships: []
       }

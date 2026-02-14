@@ -8,6 +8,7 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, Dr
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatKRW, formatVolume, type CoinData } from "@/lib/cryptoData";
 import { useCryptoData } from "@/hooks/useCryptoData";
+import { useAuth } from "@/hooks/useAuth";
 import AnimatedPage from "@/components/AnimatedPage";
 import PriceFlash from "@/components/PriceFlash";
 import CoinIcon from "@/components/CoinIcon";
@@ -34,6 +35,7 @@ const news = [
 
 const Index = () => {
   const { data: coins = [], isLoading } = useCryptoData();
+  const { user } = useAuth();
   const [selectedCoin, setSelectedCoin] = useState<CoinData | null>(null);
   const [tradeTab, setTradeTab] = useState("buy");
   const [tradeAmount, setTradeAmount] = useState("");
@@ -45,7 +47,8 @@ const Index = () => {
   return (
     <AnimatedPage>
       <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto">
-        {/* Hero Banner */}
+        {/* Hero Banner - only for non-logged-in users */}
+        {!user && (
         <section className="relative overflow-hidden rounded-2xl gradient-hero border border-primary/10 p-6 md:p-10">
           <div className="relative z-10">
             <h1 className="text-2xl md:text-4xl font-bold mb-3 leading-tight">
@@ -66,6 +69,7 @@ const Index = () => {
           <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-primary/5 blur-3xl" />
           <div className="absolute -right-10 -bottom-10 h-40 w-40 rounded-full bg-accent/10 blur-2xl" />
         </section>
+        )}
 
         {/* Stats */}
         <section className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">

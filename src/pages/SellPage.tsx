@@ -8,9 +8,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { chains, formatKRW, type CoinData, type ChainInfo } from "@/lib/cryptoData";
 import { useCryptoData } from "@/hooks/useCryptoData";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserBalance } from "@/hooks/useUserBalance";
 import { supabase } from "@/integrations/supabase/client";
 import AnimatedPage from "@/components/AnimatedPage";
 import CoinIcon from "@/components/CoinIcon";
+import ChainIcon from "@/components/ChainIcon";
 import { toast } from "@/hooks/use-toast";
 
 const STEPS = ["주 체인 선택", "코인 선택", "수량 입력", "충币 주소", "은행 정보", "확인"];
@@ -35,6 +37,7 @@ const statusConfig: Record<OrderStatus, { label: string; icon: typeof Clock; col
 const SellPage = () => {
   const { data: coins = [] } = useCryptoData();
   const { user } = useAuth();
+  const { data: balance } = useUserBalance();
   const [step, setStep] = useState(0);
   const [selectedChain, setSelectedChain] = useState<ChainInfo | null>(null);
   const [selectedCoin, setSelectedCoin] = useState<CoinData | null>(null);
@@ -134,7 +137,7 @@ const SellPage = () => {
           {chains.map((chain) => (
             <Card key={chain.id} onClick={() => setSelectedChain(chain)} className={`cursor-pointer transition-all hover:border-primary/40 ${selectedChain?.id === chain.id ? "border-primary bg-primary/5" : "bg-card border-border/50"}`}>
               <CardContent className="p-4 flex items-center gap-3">
-                <span className="text-2xl">{chain.icon}</span>
+                <ChainIcon image={chain.image} icon={chain.icon} name={chain.name} size="lg" />
                 <span className="font-medium text-sm">{chain.name}</span>
               </CardContent>
             </Card>
