@@ -10,6 +10,7 @@ import { formatKRW, formatVolume, type CoinData } from "@/lib/cryptoData";
 import { useCryptoData } from "@/hooks/useCryptoData";
 import AnimatedPage from "@/components/AnimatedPage";
 import PriceFlash from "@/components/PriceFlash";
+import CoinIcon from "@/components/CoinIcon";
 
 const stats = [
   { label: "24시간 거래량", value: "$48.2B", change: "+12.5%", icon: TrendingUp },
@@ -179,7 +180,7 @@ const Index = () => {
                       <div className="flex items-center gap-3 md:gap-4">
                         <span className="text-xs text-muted-foreground w-5 text-center font-medium">{index + 1}</span>
                         <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-secondary text-lg shrink-0">{coin.icon}</div>
+                          <CoinIcon image={coin.image} icon={coin.icon} symbol={coin.symbol} />
                           <div className="min-w-0">
                             <p className="font-semibold text-sm truncate">{coin.symbol}</p>
                             <p className="text-xs text-muted-foreground truncate">{coin.nameKr}</p>
@@ -222,7 +223,7 @@ const Index = () => {
               <>
                 <DrawerHeader>
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-xl">{selectedCoin.icon}</div>
+                    <CoinIcon image={selectedCoin.image} icon={selectedCoin.icon} symbol={selectedCoin.symbol} size="lg" />
                     <div>
                       <DrawerTitle className="text-foreground">{selectedCoin.symbol} / KRW</DrawerTitle>
                       <DrawerDescription>{selectedCoin.nameKr} · {formatKRW(selectedCoin.priceKrw)}</DrawerDescription>

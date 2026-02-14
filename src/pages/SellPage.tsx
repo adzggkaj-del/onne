@@ -7,7 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { chains, formatKRW, type CoinData, type ChainInfo } from "@/lib/cryptoData";
 import { useCryptoData } from "@/hooks/useCryptoData";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import AnimatedPage from "@/components/AnimatedPage";
+import CoinIcon from "@/components/CoinIcon";
 import { toast } from "@/hooks/use-toast";
 
 const STEPS = ["주 체인 선택", "코인 선택", "수량 입력", "충币 주소", "은행 정보", "확인"];
@@ -31,6 +34,7 @@ const statusConfig: Record<OrderStatus, { label: string; icon: typeof Clock; col
 
 const SellPage = () => {
   const { data: coins = [] } = useCryptoData();
+  const { user } = useAuth();
   const [step, setStep] = useState(0);
   const [selectedChain, setSelectedChain] = useState<ChainInfo | null>(null);
   const [selectedCoin, setSelectedCoin] = useState<CoinData | null>(null);
@@ -61,10 +65,32 @@ const SellPage = () => {
     toast({ title: "주소가 복사되었습니다" });
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    if (!user || !selectedCoin || !selectedChain) return;
+    
+    const { error } = await supabase.from("orders").insert({
+      user_id: user.id,
+      type: "sell",
+      coin_id: selectedCoin.id,
+      coin_symbol: selectedCoin.symbol,
+      amount: numAmount,
+      price_krw: selectedCoin.priceKrw,
+      total_krw: krwTotal - fee,
+      fee_krw: fee,
+      status: "대기",
+      chain: selectedChain.id,
+      bank_name: bankName,
+      account_number: accountNumber,
+      account_holder: accountHolder,
+    });
+
+    if (error) {
+      toast({ title: "주문 실패", description: error.message, variant: "destructive" });
+      return;
+    }
+
     setShowConfirm(true);
     setOrderStatus("waiting");
-    // Simulate status progression
     setTimeout(() => setOrderStatus("processing"), 2000);
     setTimeout(() => setOrderStatus("paid"), 4000);
     setTimeout(() => setOrderStatus("completed"), 6000);
@@ -122,7 +148,7 @@ const SellPage = () => {
           {filteredCoins.map((coin) => (
             <Card key={coin.id} onClick={() => setSelectedCoin(coin)} className={`cursor-pointer transition-all hover:border-primary/40 ${selectedCoin?.id === coin.id ? "border-primary bg-primary/5" : "bg-card border-border/50"}`}>
               <CardContent className="p-3 flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-secondary text-lg">{coin.icon}</div>
+                <CoinIcon image={coin.image} icon={coin.icon} symbol={coin.symbol} />
                 <div className="flex-1">
                   <p className="font-semibold text-sm">{coin.symbol}</p>
                   <p className="text-xs text-muted-foreground">{coin.nameKr}</p>

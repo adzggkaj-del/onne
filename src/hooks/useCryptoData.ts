@@ -42,6 +42,7 @@ interface CoinGeckoMarket {
   id: string;
   symbol: string;
   name: string;
+  image: string;
   current_price: number;
   price_change_percentage_24h: number;
   total_volume: number;
@@ -63,6 +64,7 @@ const fetchCoins = async (): Promise<CoinData[]> => {
       name: coin.name,
       nameKr: NAME_KR_MAP[coin.id] ?? coin.name,
       icon: ICON_MAP[coin.id] ?? "●",
+      image: coin.image,
       chain: CHAIN_MAP[coin.id] ?? "ethereum",
       priceKrw: coin.current_price * PRICE_MARKUP,
       priceUsd: (coin.current_price / KRW_RATE) * PRICE_MARKUP,

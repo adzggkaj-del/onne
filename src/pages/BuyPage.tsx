@@ -1,24 +1,28 @@
 import { useState } from "react";
-import { ArrowLeft, ArrowRight, Check, Copy, Wallet } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Wallet } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
 import { chains, formatKRW, type CoinData, type ChainInfo } from "@/lib/cryptoData";
 import { useCryptoData } from "@/hooks/useCryptoData";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import AnimatedPage from "@/components/AnimatedPage";
+import CoinIcon from "@/components/CoinIcon";
 import { toast } from "@/hooks/use-toast";
 
 const STEPS = ["주 체인 선택", "코인 선택", "수량 입력", "지갑 주소", "확인"];
 
 const BuyPage = () => {
   const { data: coins = [] } = useCryptoData();
+  const { user } = useAuth();
   const [step, setStep] = useState(0);
   const [selectedChain, setSelectedChain] = useState<ChainInfo | null>(null);
   const [selectedCoin, setSelectedCoin] = useState<CoinData | null>(null);
   const [amount, setAmount] = useState("");
   const [walletAddress, setWalletAddress] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const filteredCoins = selectedChain
     ? coins.filter((c) => c.chain === selectedChain.id)
@@ -36,10 +40,30 @@ const BuyPage = () => {
     return true;
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
+    if (!user || !selectedCoin || !selectedChain) return;
+    setSubmitting(true);
+    const { error } = await supabase.from("orders").insert({
+      user_id: user.id,
+      type: "buy",
+      coin_id: selectedCoin.id,
+      coin_symbol: selectedCoin.symbol,
+      amount: numAmount,
+      price_krw: selectedCoin.priceKrw,
+      total_krw: krwTotal + fee,
+      fee_krw: fee,
+      status: "대기",
+      chain: selectedChain.id,
+      wallet_address: walletAddress,
+    });
+    setSubmitting(false);
+    if (error) {
+      toast({ title: "주문 실패", description: error.message, variant: "destructive" });
+      return;
+    }
     toast({
       title: "구매 주문이 접수되었습니다",
-      description: `${selectedCoin?.symbol} ${amount}개 · ${formatKRW(krwTotal + fee)}`,
+      description: `${selectedCoin.symbol} ${amount}개 · ${formatKRW(krwTotal + fee)}`,
     });
     setStep(0);
     setSelectedChain(null);
@@ -88,7 +112,7 @@ const BuyPage = () => {
           {filteredCoins.map((coin) => (
             <Card key={coin.id} onClick={() => setSelectedCoin(coin)} className={`cursor-pointer transition-all hover:border-primary/40 ${selectedCoin?.id === coin.id ? "border-primary bg-primary/5" : "bg-card border-border/50"}`}>
               <CardContent className="p-3 flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-secondary text-lg">{coin.icon}</div>
+                <CoinIcon image={coin.image} icon={coin.icon} symbol={coin.symbol} />
                 <div className="flex-1">
                   <p className="font-semibold text-sm">{coin.symbol}</p>
                   <p className="text-xs text-muted-foreground">{coin.nameKr}</p>
@@ -194,7 +218,7 @@ const BuyPage = () => {
             다음 <ArrowRight className="h-4 w-4 ml-1" />
           </Button>
         ) : (
-          <Button className="flex-1 bg-success hover:bg-success/90 text-white" onClick={handleConfirm}>
+          <Button className="flex-1 bg-success hover:bg-success/90 text-white" onClick={handleConfirm} disabled={submitting}>
             <Check className="h-4 w-4 mr-1" /> 구매 확인
           </Button>
         )}
