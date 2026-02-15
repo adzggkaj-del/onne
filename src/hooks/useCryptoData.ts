@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { PRICE_MARKUP, mockCoins, type CoinData } from "@/lib/cryptoData";
+import { PRICE_MARKUP, BINANCE_SYMBOL_MAP, generateSparkline, mockCoins, type CoinData } from "@/lib/cryptoData";
 
-const KRW_RATE = 1380;
+const KRW_FALLBACK = 1380;
 
 interface SupportedCoin {
   coin_id: string;
@@ -13,15 +14,12 @@ interface SupportedCoin {
   sort_order: number;
 }
 
-interface CoinGeckoMarket {
-  id: string;
+interface BinanceTicker {
   symbol: string;
-  name: string;
-  image: string;
-  current_price: number;
-  price_change_percentage_24h: number;
-  total_volume: number;
-  sparkline_in_7d?: { price: number[] };
+  lastPrice: string;
+  priceChangePercent: string;
+  volume: string;
+  quoteVolume: string;
 }
 
 const fetchSupportedCoins = async (): Promise<SupportedCoin[]> => {
@@ -39,41 +37,120 @@ const fetchCoins = async (): Promise<CoinData[]> => {
   if (supportedCoins.length === 0) return mockCoins;
 
   const coinMap = new Map(supportedCoins.map((c) => [c.coin_id, c]));
-  const ids = supportedCoins.map((c) => c.coin_id).join(",");
 
+  // Build list of Binance symbols to query
+  const symbols = supportedCoins
+    .map((c) => BINANCE_SYMBOL_MAP[c.coin_id])
+    .filter((s) => s && s.length > 0);
+
+  // Fetch all tickers from Binance
+  const symbolsParam = JSON.stringify(symbols);
   const res = await fetch(
-    `https://api.coingecko.com/api/v3/coins/markets?vs_currency=krw&ids=${ids}&sparkline=true&price_change_percentage=24h`
+    `https://api.binance.com/api/v3/ticker/24hr?symbols=${encodeURIComponent(symbolsParam)}`
   );
-  if (!res.ok) throw new Error("CoinGecko API error");
-  const data: CoinGeckoMarket[] = await res.json();
+  if (!res.ok) throw new Error("Binance API error");
+  const tickers: BinanceTicker[] = await res.json();
 
-  return data.map((coin) => {
-    const sc = coinMap.get(coin.id);
-    const sparkline = coin.sparkline_in_7d?.price?.slice(-24) ?? [];
+  // Build symbol -> ticker map
+  const tickerMap = new Map(tickers.map((t) => [t.symbol, t]));
+
+  // Map coins
+  return supportedCoins.map((sc) => {
+    const binanceSymbol = BINANCE_SYMBOL_MAP[sc.coin_id] || "";
+    const ticker = tickerMap.get(binanceSymbol);
+    const mock = mockCoins.find((m) => m.symbol === sc.symbol);
+
+    let priceUsd: number;
+    let change24h: number;
+    let volume24h: number;
+
+    if (sc.coin_id === "tether") {
+      priceUsd = 1.0;
+      change24h = 0.01;
+      volume24h = 62000000000;
+    } else if (ticker) {
+      priceUsd = parseFloat(ticker.lastPrice);
+      change24h = parseFloat(ticker.priceChangePercent);
+      volume24h = parseFloat(ticker.quoteVolume);
+    } else if (mock) {
+      priceUsd = mock.priceUsd;
+      change24h = mock.change24h;
+      volume24h = mock.volume24h;
+    } else {
+      priceUsd = 0;
+      change24h = 0;
+      volume24h = 0;
+    }
+
+    const priceKrw = priceUsd * KRW_FALLBACK * PRICE_MARKUP;
+    const volatility = priceUsd * 0.01;
+
     return {
-      id: coin.id,
-      symbol: coin.symbol.toUpperCase(),
-      name: coin.name,
-      nameKr: sc?.name_kr ?? coin.name,
-      icon: sc?.icon ?? "●",
-      image: coin.image,
-      chain: sc?.chain ?? "ethereum",
-      priceKrw: coin.current_price * PRICE_MARKUP,
-      priceUsd: (coin.current_price / KRW_RATE) * PRICE_MARKUP,
-      change24h: coin.price_change_percentage_24h ?? 0,
-      volume24h: coin.total_volume,
-      sparkline,
+      id: sc.coin_id,
+      symbol: sc.symbol,
+      name: mock?.name ?? sc.symbol,
+      nameKr: sc.name_kr,
+      icon: sc.icon,
+      image: mock?.image,
+      chain: sc.chain,
+      priceUsd,
+      priceKrw,
+      change24h,
+      volume24h,
+      sparkline: generateSparkline(priceUsd, volatility),
     };
   });
 };
 
 export const useCryptoData = () => {
-  return useQuery<CoinData[]>({
+  const query = useQuery<CoinData[]>({
     queryKey: ["crypto-markets"],
     queryFn: fetchCoins,
-    refetchInterval: 1000,
-    staleTime: 800,
+    refetchInterval: 3000,
+    staleTime: 2500,
     placeholderData: mockCoins,
     retry: 2,
   });
+
+  // Client-side micro-fluctuation for visual real-time effect
+  const [fluctuatedData, setFluctuatedData] = useState<CoinData[] | undefined>(undefined);
+  const baseDataRef = useRef<CoinData[] | undefined>(undefined);
+
+  // Update base data when query data changes
+  useEffect(() => {
+    if (query.data) {
+      baseDataRef.current = query.data;
+    }
+  }, [query.data]);
+
+  // Apply micro-fluctuation every 1 second
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const base = baseDataRef.current;
+      if (!base) return;
+
+      const fluctuated = base.map((coin) => {
+        // Random offset between -0.05% and +0.05%
+        const offset = 1 + (Math.random() - 0.5) * 0.001;
+        const newPriceKrw = coin.priceKrw * offset;
+        const newPriceUsd = coin.priceUsd * offset;
+        // Slight change24h jitter
+        const changeOffset = (Math.random() - 0.5) * 0.02;
+        return {
+          ...coin,
+          priceKrw: newPriceKrw,
+          priceUsd: newPriceUsd,
+          change24h: coin.change24h + changeOffset,
+        };
+      });
+      setFluctuatedData(fluctuated);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  return {
+    ...query,
+    data: fluctuatedData ?? query.data,
+  };
 };

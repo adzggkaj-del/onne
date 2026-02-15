@@ -30,7 +30,19 @@ export const chains: ChainInfo[] = [
   { id: "polygon", name: "Polygon", icon: "⬡", image: "https://assets.coingecko.com/coins/images/4713/small/polygon.png" },
 ];
 
-const generateSparkline = (base: number, volatility: number): number[] => {
+// Binance symbol mapping: coin_id -> Binance trading pair
+export const BINANCE_SYMBOL_MAP: Record<string, string> = {
+  bitcoin: "BTCUSDT",
+  ethereum: "ETHUSDT",
+  binancecoin: "BNBUSDT",
+  solana: "SOLUSDT",
+  ripple: "XRPUSDT",
+  tron: "TRXUSDT",
+  "matic-network": "MATICUSDT",
+  tether: "", // fixed at 1 USD
+};
+
+export const generateSparkline = (base: number, volatility: number): number[] => {
   const points: number[] = [];
   let current = base;
   for (let i = 0; i < 24; i++) {
