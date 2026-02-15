@@ -71,8 +71,8 @@ export const useCryptoData = () => {
   return useQuery<CoinData[]>({
     queryKey: ["crypto-markets"],
     queryFn: fetchCoins,
-    refetchInterval: 10000,
-    staleTime: 8000,
+    refetchInterval: 1000,
+    staleTime: 800,
     placeholderData: mockCoins,
     retry: 2,
   });

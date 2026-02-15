@@ -1,12 +1,9 @@
-import { useState } from "react";
-import { TrendingUp, Users, Coins, Zap, ArrowUpRight, ArrowDownRight, Newspaper, PieChart, ExternalLink } from "lucide-react";
+import { useMemo } from "react";
+import { TrendingUp, Users, Coins, Zap, ArrowUpRight, ArrowDownRight, PieChart, Activity } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter, DrawerClose } from "@/components/ui/drawer";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatKRW, formatVolume, type CoinData } from "@/lib/cryptoData";
+import { formatKRW, formatVolume, generateFakeTransactions } from "@/lib/cryptoData";
 import { useCryptoData } from "@/hooks/useCryptoData";
 import { useAuth } from "@/hooks/useAuth";
 import AnimatedPage from "@/components/AnimatedPage";
@@ -26,23 +23,11 @@ const portfolio = [
   { symbol: "SOL", amount: 45.5, value: 12267900, pct: 18 },
 ];
 
-const news = [
-  { title: "비트코인, 10만 달러 돌파 임박 – 기관 투자 급증", time: "2시간 전", tag: "시장" },
-  { title: "한국 금융위원회, 가상자산 규제 프레임워크 발표", time: "4시간 전", tag: "규제" },
-  { title: "이더리움 Dencun 업그레이드 완료, L2 수수료 대폭 인하", time: "6시간 전", tag: "기술" },
-  { title: "솔라나 생태계 TVL 역대 최고치 경신", time: "8시간 전", tag: "DeFi" },
-];
-
 const Index = () => {
   const { data: coins = [], isLoading } = useCryptoData();
   const { user } = useAuth();
-  const [selectedCoin, setSelectedCoin] = useState<CoinData | null>(null);
-  const [tradeTab, setTradeTab] = useState("buy");
-  const [tradeAmount, setTradeAmount] = useState("");
 
-  const krwValue = selectedCoin && tradeAmount
-    ? parseFloat(tradeAmount) * selectedCoin.priceKrw
-    : 0;
+  const fakeTransactions = useMemo(() => generateFakeTransactions(30), []);
 
   return (
     <AnimatedPage>
@@ -58,7 +43,7 @@ const Index = () => {
               350개 이상의 코인을 한국 원화로 간편하게 거래하세요. 업계 최저 수수료와 실시간 시세를 제공합니다.
             </p>
             <div className="flex gap-3">
-              <Button className="gradient-primary text-primary-foreground hover:opacity-90 transition-opacity">
+              <Button className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold">
                 거래 시작하기
               </Button>
               <Button variant="outline" className="border-primary/30 text-foreground hover:bg-primary/10">
@@ -87,7 +72,7 @@ const Index = () => {
           ))}
         </section>
 
-        {/* Portfolio + News */}
+        {/* Portfolio + Scrolling Transactions */}
         <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Card className="bg-card border-border/50">
             <CardHeader className="pb-3">
@@ -123,37 +108,38 @@ const Index = () => {
             </CardContent>
           </Card>
 
-          <Card className="bg-card border-border/50">
+          {/* Scrolling fake transactions */}
+          <Card className="bg-card border-border/50 overflow-hidden">
             <CardHeader className="pb-3">
               <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <Newspaper className="h-4 w-4 text-primary" />
-                실시간 뉴스
+                <Activity className="h-4 w-4 text-primary" />
+                실시간 거래 현황
               </CardTitle>
             </CardHeader>
-            <CardContent className="pt-0 space-y-3">
-              {news.map((item, i) => (
-                <div key={i} className="flex gap-3 group cursor-pointer">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">{item.title}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium">{item.tag}</span>
-                      <span className="text-xs text-muted-foreground">{item.time}</span>
+            <CardContent className="pt-0 h-48 overflow-hidden relative">
+              <div className="absolute inset-0">
+                <div className="animate-scroll-up space-y-2.5">
+                  {[...fakeTransactions, ...fakeTransactions].map((tx, i) => (
+                    <div key={i} className="flex items-center gap-2 text-xs px-1">
+                      <span className="font-medium text-foreground min-w-[3rem]">{tx.username}</span>
+                      <span className="text-muted-foreground font-mono">{tx.wallet}</span>
+                      <span className={`ml-auto font-bold whitespace-nowrap ${tx.action === "구매" ? "text-emerald-400" : "text-red-400"}`}>
+                        {tx.action} {tx.amount} {tx.symbol}
+                      </span>
                     </div>
-                  </div>
-                  <ExternalLink className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-1" />
+                  ))}
                 </div>
-              ))}
+              </div>
+              <div className="absolute top-0 left-0 right-0 h-6 bg-gradient-to-b from-card to-transparent z-10" />
+              <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-card to-transparent z-10" />
             </CardContent>
           </Card>
         </section>
 
-        {/* Market List */}
+        {/* Market List - display only */}
         <section>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold">인기 코인</h2>
-            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground text-xs">
-              전체보기 →
-            </Button>
           </div>
 
           <div className="space-y-2">
@@ -175,11 +161,7 @@ const Index = () => {
                   </Card>
                 ))
               : coins.map((coin, index) => (
-                  <Card
-                    key={coin.id}
-                    className="bg-card border-border/50 hover:border-primary/20 transition-all cursor-pointer group"
-                    onClick={() => { setSelectedCoin(coin); setTradeAmount(""); }}
-                  >
+                  <Card key={coin.id} className="bg-card border-border/50">
                     <CardContent className="p-3 md:p-4">
                       <div className="flex items-center gap-3 md:gap-4">
                         <span className="text-xs text-muted-foreground w-5 text-center font-medium">{index + 1}</span>
@@ -210,78 +192,12 @@ const Index = () => {
                           {coin.change24h >= 0 ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
                           <span className="text-sm font-medium">{Math.abs(coin.change24h).toFixed(2)}%</span>
                         </div>
-                        <Button size="sm" variant="outline" className="hidden md:inline-flex border-primary/30 text-primary hover:bg-primary/10 text-xs" onClick={(e) => { e.stopPropagation(); setSelectedCoin(coin); setTradeAmount(""); }}>
-                          거래
-                        </Button>
                       </div>
                     </CardContent>
                   </Card>
                 ))}
           </div>
         </section>
-
-        {/* Trade Drawer */}
-        <Drawer open={!!selectedCoin} onOpenChange={(open) => { if (!open) setSelectedCoin(null); }}>
-          <DrawerContent className="bg-card border-border">
-            {selectedCoin && (
-              <>
-                <DrawerHeader>
-                  <div className="flex items-center gap-3">
-                    <CoinIcon image={selectedCoin.image} icon={selectedCoin.icon} symbol={selectedCoin.symbol} size="lg" />
-                    <div>
-                      <DrawerTitle className="text-foreground">{selectedCoin.symbol} / KRW</DrawerTitle>
-                      <DrawerDescription>{selectedCoin.nameKr} · {formatKRW(selectedCoin.priceKrw)}</DrawerDescription>
-                    </div>
-                    <div className={`ml-auto text-sm font-medium ${selectedCoin.change24h >= 0 ? "text-success" : "text-destructive"}`}>
-                      {selectedCoin.change24h >= 0 ? "+" : ""}{selectedCoin.change24h.toFixed(2)}%
-                    </div>
-                  </div>
-                </DrawerHeader>
-
-                <div className="px-4 pb-4 space-y-4">
-                  <Tabs value={tradeTab} onValueChange={setTradeTab}>
-                    <TabsList className="w-full bg-secondary">
-                      <TabsTrigger value="buy" className="flex-1 data-[state=active]:bg-success data-[state=active]:text-success-foreground">매수</TabsTrigger>
-                      <TabsTrigger value="sell" className="flex-1 data-[state=active]:bg-destructive data-[state=active]:text-destructive-foreground">매도</TabsTrigger>
-                    </TabsList>
-                  </Tabs>
-
-                  <div className="space-y-3">
-                    <div>
-                      <label className="text-xs text-muted-foreground mb-1 block">수량 ({selectedCoin.symbol})</label>
-                      <Input
-                        type="number"
-                        placeholder="0.00"
-                        value={tradeAmount}
-                        onChange={(e) => setTradeAmount(e.target.value)}
-                        className="bg-secondary border-border/50"
-                        min="0"
-                        step="any"
-                      />
-                    </div>
-                    <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
-                      <span className="text-xs text-muted-foreground">환산 금액 (KRW)</span>
-                      <span className="text-sm font-semibold">{krwValue > 0 ? formatKRW(krwValue) : "₩0"}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <span>수수료 (0.1%)</span>
-                      <span>{krwValue > 0 ? formatKRW(krwValue * 0.001) : "₩0"}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <DrawerFooter>
-                  <Button className={`w-full ${tradeTab === "buy" ? "bg-success hover:bg-success/90" : "bg-destructive hover:bg-destructive/90"} text-white`}>
-                    {tradeTab === "buy" ? "매수" : "매도"} {selectedCoin.symbol}
-                  </Button>
-                  <DrawerClose asChild>
-                    <Button variant="outline" className="w-full border-border/50">취소</Button>
-                  </DrawerClose>
-                </DrawerFooter>
-              </>
-            )}
-          </DrawerContent>
-        </Drawer>
       </div>
     </AnimatedPage>
   );

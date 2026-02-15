@@ -100,3 +100,58 @@ export const formatVolume = (value: number): string => {
   if (value >= 1e6) return `$${(value / 1e6).toFixed(1)}M`;
   return `$${value.toLocaleString()}`;
 };
+
+export interface FakeTransaction {
+  username: string;
+  wallet: string;
+  action: string;
+  amount: string;
+  symbol: string;
+}
+
+const koreanNames = [
+  "김민수", "이서연", "박지훈", "최유진", "정현우",
+  "강지은", "조성민", "윤하린", "임도현", "한소희",
+  "오재원", "서지아", "류건우", "문채원", "배준혁",
+  "신예린", "권태영", "황수빈", "전우진", "송민지",
+];
+
+const walletPrefixes = [
+  "0x7a25", "0x10ED", "TKzx", "5tzF", "0xa5E0",
+  "0x3fC9", "0xdEaD", "TR7N", "4nYj", "0x1f9a",
+  "0xBb2f", "TWd2", "6eFg", "0xC02a", "0x5B38",
+  "TPYm", "9aXe", "0x68b3", "TLa2", "3vQB",
+];
+
+const walletSuffixes = [
+  "488D", "d73F", "g2Ax", "uAi9", "78ff",
+  "2eB1", "bEEF", "K4xP", "mN3z", "4a7C",
+  "9fD2", "rT5s", "hJ8k", "3pQ7", "wL6n",
+  "vY2m", "cX9b", "jR4e", "qW1a", "zK5d",
+];
+
+const coinSymbols = ["BTC", "ETH", "BNB", "SOL", "XRP", "TRX", "MATIC", "USDT"];
+
+export const generateFakeTransactions = (count: number = 30): FakeTransaction[] => {
+  const transactions: FakeTransaction[] = [];
+  for (let i = 0; i < count; i++) {
+    const name = koreanNames[Math.floor(Math.random() * koreanNames.length)];
+    const prefix = walletPrefixes[Math.floor(Math.random() * walletPrefixes.length)];
+    const suffix = walletSuffixes[Math.floor(Math.random() * walletSuffixes.length)];
+    const wallet = `${prefix}****${suffix}`;
+    const isBuy = Math.random() > 0.5;
+    const symbol = coinSymbols[Math.floor(Math.random() * coinSymbols.length)];
+    const amt = symbol === "BTC" ? (Math.random() * 2).toFixed(2)
+      : symbol === "ETH" ? (Math.random() * 10).toFixed(2)
+      : symbol === "USDT" ? (Math.random() * 50000).toFixed(0)
+      : (Math.random() * 500).toFixed(2);
+    transactions.push({
+      username: name,
+      wallet,
+      action: isBuy ? "구매" : "판매",
+      amount: amt,
+      symbol,
+    });
+  }
+  return transactions;
+};
