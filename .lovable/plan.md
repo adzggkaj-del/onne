@@ -1,143 +1,110 @@
 
 
-## 后台管理系统建设方案
+## 后台管理系统实现方案
 
 ### 概述
 
-为 CryptoX 构建一个独立的后台管理面板（路由 `/admin`），仅限管理员用户访问。管理面板包含三大功能模块：用户管理、币种管理、点差/费率配置。
-
-当前系统中，买币折扣（0.99）、卖币上浮（1.01）、借贷利率（0.1%/天）等参数均硬编码在前端页面中。本方案将这些参数迁移到数据库的 `platform_settings` 表中，实现后台动态配置。
+为 CryptoX 构建完整的后台管理系统，包括数据库角色系统、平台配置表、管理后台 UI，以及将前端硬编码参数迁移为动态配置。
 
 ---
 
-### 一、数据库变更
+### 第一步：数据库迁移
 
-#### 1. 创建角色系统（权限控制）
+创建一个数据库迁移，包含以下内容：
 
-- 创建 `app_role` 枚举类型（`admin`, `moderator`, `user`）
-- 创建 `user_roles` 表，存储用户角色映射
-- 创建 `has_role()` 安全函数（SECURITY DEFINER），供 RLS 策略使用
-- 为 `user_roles` 设置 RLS：仅管理员可读写
+**1. 角色系统**
+- 创建 `app_role` 枚举（`admin`, `moderator`, `user`）
+- 创建 `user_roles` 表（`user_id`, `role`，唯一约束）
+- 创建 `has_role()` SECURITY DEFINER 函数
+- 为 `user_roles` 启用 RLS，仅管理员可读写
 
-#### 2. 创建平台设置表 `platform_settings`
+**2. 平台设置表 `platform_settings`**
+- 字段：`id`, `key`(unique), `value`, `label`, `description`, `updated_at`
+- 预置 6 项配置：`buy_spread=0.99`, `sell_spread=1.01`, `trade_fee_rate=0.001`, `lending_daily_rate=0.001`, `lending_term_days=30`, `krw_rate=1380`
+- RLS：认证用户可读，管理员可更新
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| id | uuid | 主键 |
-| key | text (unique) | 配置项标识 |
-| value | text | 配置值 |
-| label | text | 显示名称 |
-| description | text | 配置说明 |
-| updated_at | timestamptz | 更新时间 |
-
-预设配置项：
-- `buy_spread` = `0.99`（买币价格系数）
-- `sell_spread` = `1.01`（卖币价格系数）
-- `trade_fee_rate` = `0.001`（交易手续费率 0.1%）
-- `lending_daily_rate` = `0.001`（借贷日利率 0.1%）
-- `lending_term_days` = `30`（借贷期限天数）
-- `krw_rate` = `1380`（KRW 汇率备用值）
-
-RLS 策略：所有认证用户可读取（前端需要读取这些配置），仅管理员可更新。
-
-#### 3. 扩展 `supported_coins` 表的 RLS
-
-为管理员添加 INSERT / UPDATE / DELETE 权限。
-
-#### 4. 扩展 `profiles` 表的 RLS
-
-为管理员添加读取所有用户资料的权限。
-
-#### 5. 扩展 `orders` 表的 RLS
-
-为管理员添加读取和更新所有订单的权限（用于查看和处理订单状态）。
+**3. 扩展现有表 RLS**
+- `supported_coins`：管理员可 INSERT/UPDATE/DELETE
+- `profiles`：管理员可 SELECT 所有用户
+- `orders`：管理员可 SELECT/UPDATE 所有订单
 
 ---
 
-### 二、前端页面
+### 第二步：新建前端文件
 
-#### 1. 管理员路由保护组件 `AdminRoute`
+**Hooks：**
+- `src/hooks/usePlatformSettings.ts` -- 使用 React Query 从 `platform_settings` 读取配置，返回 `{ buySpread, sellSpread, tradeFeeRate, lendingDailyRate, lendingTermDays, krwRate, isLoading }`
+- `src/hooks/useAdmin.ts` -- 查询 `user_roles` 判断当前用户是否为 admin
 
-- 检查当前用户是否具有 `admin` 角色（从 `user_roles` 表查询）
-- 非管理员重定向到首页
+**组件：**
+- `src/components/AdminRoute.tsx` -- 路由守卫，非管理员重定向到首页
+- `src/components/AdminLayout.tsx` -- 管理后台独立布局，左侧导航栏（仪表盘、用户、币种、设置、订单）
 
-#### 2. 管理后台布局 `AdminLayout`
-
-- 独立的侧边栏导航（不使用前台的 Layout）
-- 包含：仪表盘、用户管理、币种管理、系统设置、订单管理 等导航项
-
-#### 3. 管理页面
-
-**用户管理页 `/admin/users`**
-- 用户列表（用户名、UID、邮箱、认证状态、注册时间）
-- 可修改用户的 `verified` 认证状态
-- 查看用户的交易记录
-
-**币种管理页 `/admin/coins`**
-- 展示 `supported_coins` 列表
-- 可以新增、编辑、删除币种
-- 可切换 `enabled` 状态
-- 可调整排序顺序
-
-**系统设置页 `/admin/settings`**
-- 从 `platform_settings` 表读取所有配置
-- 以表单形式编辑每个配置项的值
-- 保存后即时生效
-- 主要配置项：
-  - 买币点差系数（当前 0.99，即 -1%）
-  - 卖币点差系数（当前 1.01，即 +1%）
-  - 交易手续费率
-  - 借贷日利率
-  - 借贷期限天数
-  - KRW 汇率
-
-**订单管理页 `/admin/orders`**
-- 查看所有用户的订单
-- 可更新订单状态（대기 / 처리 중 / 완료）
+**管理页面：**
+- `src/pages/admin/AdminDashboard.tsx` -- 概览（用户数、订单数、币种数等统计卡片）
+- `src/pages/admin/AdminUsers.tsx` -- 用户列表，可切换 verified 状态
+- `src/pages/admin/AdminCoins.tsx` -- 币种 CRUD，启用/禁用，排序
+- `src/pages/admin/AdminSettings.tsx` -- 表单编辑所有 platform_settings 配置项
+- `src/pages/admin/AdminOrders.tsx` -- 全部订单列表，可更新状态
 
 ---
 
-### 三、前端代码修改（读取动态配置）
+### 第三步：修改现有文件
 
-#### 1. 创建 `usePlatformSettings` hook
+**路由 (`src/App.tsx`)：**
+- 添加 `/admin` 路由组，使用 `AdminRoute` + `AdminLayout` 包裹所有管理页面
 
-- 从 `platform_settings` 表查询所有配置
-- 使用 React Query 缓存
-- 返回 `{ buySpread, sellSpread, tradeFee, lendingRate, lendingDays, krwRate }`
-
-#### 2. 修改现有页面，替换硬编码值
-
-- **`BuyPage.tsx`** / **`BuyFormPage.tsx`**：`BUY_DISCOUNT` 改为从 settings 读取
-- **`SellPage.tsx`** / **`SellFormPage.tsx`**：`SELL_MARKUP` 改为从 settings 读取
-- **`LendingFormPage.tsx`**：`DAILY_RATE` 和 `TERM_DAYS` 改为从 settings 读取
-- **`useCryptoData.ts`**：`PRICE_MARKUP` 和 `KRW_FALLBACK` 改为从 settings 读取
+**替换硬编码值：**
+- `BuyPage.tsx`：`BUY_DISCOUNT = 0.99` 改为从 `usePlatformSettings` 读取
+- `BuyFormPage.tsx`：同上，买币价格系数 + 手续费率
+- `SellPage.tsx`：`SELL_MARKUP = 1.01` 改为动态读取
+- `SellFormPage.tsx`：同上
+- `LendingFormPage.tsx`：`DAILY_RATE = 0.001` 和 `TERM_DAYS = 30` 改为动态读取
+- `useCryptoData.ts`：`PRICE_MARKUP = 1.01` 和 `KRW_FALLBACK = 1380` 改为从 settings 读取（通过参数传入或直接查询）
 
 ---
 
-### 四、文件清单
+### 技术细节
 
-**新建文件**：
-- `src/hooks/usePlatformSettings.ts` -- 平台配置 hook
-- `src/hooks/useAdmin.ts` -- 管理员权限检查 hook
-- `src/components/AdminRoute.tsx` -- 管理员路由守卫
-- `src/components/AdminLayout.tsx` -- 管理后台布局
-- `src/pages/admin/AdminDashboard.tsx` -- 管理仪表盘
-- `src/pages/admin/AdminUsers.tsx` -- 用户管理
-- `src/pages/admin/AdminCoins.tsx` -- 币种管理
-- `src/pages/admin/AdminSettings.tsx` -- 系统设置
-- `src/pages/admin/AdminOrders.tsx` -- 订单管理
+**数据库查询方式：**
+由于 `platform_settings` 和 `user_roles` 是新表，TypeScript 类型尚未自动生成。代码中需要使用 `.from("platform_settings")` 并手动定义接口类型，直到类型文件自动更新。
 
-**修改文件**：
-- `src/App.tsx` -- 添加 `/admin/*` 路由
-- `src/pages/BuyPage.tsx` -- 读取动态点差
-- `src/pages/BuyFormPage.tsx` -- 读取动态点差
-- `src/pages/SellPage.tsx` -- 读取动态点差
-- `src/pages/SellFormPage.tsx` -- 读取动态点差
-- `src/pages/LendingFormPage.tsx` -- 读取动态利率
-- `src/hooks/useCryptoData.ts` -- 读取动态汇率和基础加价
+**`usePlatformSettings` 实现思路：**
+```text
+从 platform_settings SELECT 所有行
+转换为 key-value map
+返回带默认值的配置对象（防止数据未加载时出错）
+使用 React Query 缓存 5 分钟
+```
 
-**数据库迁移**：
-- 创建 `app_role` 枚举 + `user_roles` 表 + `has_role()` 函数
-- 创建 `platform_settings` 表并插入默认值
-- 更新 `supported_coins`、`profiles`、`orders` 的 RLS 策略（添加管理员权限）
+**`useCryptoData` 修改方式：**
+将 `PRICE_MARKUP` 和 `KRW_FALLBACK` 从模块级常量改为函数参数或内部查询，使其可以使用动态配置值。
+
+**管理后台 UI 风格：**
+保持与前台一致的暗色主题，使用相同的 UI 组件库（shadcn/ui），独立的侧边栏导航。
+
+---
+
+### 文件变更清单
+
+| 操作 | 文件 |
+|------|------|
+| 数据库迁移 | 角色系统 + platform_settings + RLS 扩展 |
+| 新建 | `src/hooks/usePlatformSettings.ts` |
+| 新建 | `src/hooks/useAdmin.ts` |
+| 新建 | `src/components/AdminRoute.tsx` |
+| 新建 | `src/components/AdminLayout.tsx` |
+| 新建 | `src/pages/admin/AdminDashboard.tsx` |
+| 新建 | `src/pages/admin/AdminUsers.tsx` |
+| 新建 | `src/pages/admin/AdminCoins.tsx` |
+| 新建 | `src/pages/admin/AdminSettings.tsx` |
+| 新建 | `src/pages/admin/AdminOrders.tsx` |
+| 修改 | `src/App.tsx` |
+| 修改 | `src/pages/BuyPage.tsx` |
+| 修改 | `src/pages/BuyFormPage.tsx` |
+| 修改 | `src/pages/SellPage.tsx` |
+| 修改 | `src/pages/SellFormPage.tsx` |
+| 修改 | `src/pages/LendingFormPage.tsx` |
+| 修改 | `src/hooks/useCryptoData.ts` |
+| 修改 | `src/lib/cryptoData.ts` |
 
