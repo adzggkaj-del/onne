@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Layout from "./components/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
+import AdminRoute from "./components/AdminRoute";
+import AdminLayout from "./components/AdminLayout";
 import Index from "./pages/Index";
 import BuyPage from "./pages/BuyPage";
 import BuyFormPage from "./pages/BuyFormPage";
@@ -15,6 +17,11 @@ import LendingFormPage from "./pages/LendingFormPage";
 import AssetsPage from "./pages/AssetsPage";
 import AuthPage from "./pages/AuthPage";
 import NotFound from "./pages/NotFound";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminUsers from "./pages/admin/AdminUsers";
+import AdminCoins from "./pages/admin/AdminCoins";
+import AdminSettings from "./pages/admin/AdminSettings";
+import AdminOrders from "./pages/admin/AdminOrders";
 
 const queryClient = new QueryClient();
 
@@ -35,6 +42,13 @@ const App = () => (
             <Route path="/lending/:coinId" element={<ProtectedRoute><LendingFormPage /></ProtectedRoute>} />
             <Route path="/assets" element={<ProtectedRoute><AssetsPage /></ProtectedRoute>} />
             <Route path="/auth" element={<AuthPage />} />
+          </Route>
+          <Route element={<AdminRoute><AdminLayout /></AdminRoute>}>
+            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin/users" element={<AdminUsers />} />
+            <Route path="/admin/coins" element={<AdminCoins />} />
+            <Route path="/admin/settings" element={<AdminSettings />} />
+            <Route path="/admin/orders" element={<AdminOrders />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

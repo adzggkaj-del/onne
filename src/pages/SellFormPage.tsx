@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { chains, formatKRW, type ChainInfo } from "@/lib/cryptoData";
 import { useCryptoData } from "@/hooks/useCryptoData";
+import { usePlatformSettings } from "@/hooks/usePlatformSettings";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import AnimatedPage from "@/components/AnimatedPage";
@@ -14,8 +15,6 @@ import CoinIcon from "@/components/CoinIcon";
 import ChainIcon from "@/components/ChainIcon";
 import PriceFlash from "@/components/PriceFlash";
 import { toast } from "@/hooks/use-toast";
-
-const SELL_MARKUP = 1.01;
 
 const DEPOSIT_ADDRESSES: Record<string, string> = {
   ethereum: "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
@@ -29,6 +28,7 @@ const SellFormPage = () => {
   const { coinId } = useParams<{ coinId: string }>();
   const navigate = useNavigate();
   const { data: coins = [] } = useCryptoData();
+  const { sellSpread, tradeFeeRate } = usePlatformSettings();
   const { user } = useAuth();
 
   const selectedCoin = coins.find((c) => c.id === coinId) ?? null;
@@ -43,9 +43,9 @@ const SellFormPage = () => {
   const [confirmed, setConfirmed] = useState(false);
 
   const numAmount = parseFloat(amount) || 0;
-  const sellPrice = selectedCoin ? selectedCoin.priceKrw * SELL_MARKUP : 0;
+  const sellPrice = selectedCoin ? selectedCoin.priceKrw * sellSpread : 0;
   const krwTotal = numAmount * sellPrice;
-  const fee = krwTotal * 0.001;
+  const fee = krwTotal * tradeFeeRate;
   const depositAddr = selectedChain ? DEPOSIT_ADDRESSES[selectedChain.id] : "";
 
   const copyAddress = () => {

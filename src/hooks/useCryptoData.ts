@@ -1,9 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { PRICE_MARKUP, BINANCE_SYMBOL_MAP, generateSparkline, mockCoins, type CoinData } from "@/lib/cryptoData";
-
-const KRW_FALLBACK = 1380;
+import { BINANCE_SYMBOL_MAP, generateSparkline, mockCoins, type CoinData } from "@/lib/cryptoData";
+import { usePlatformSettings } from "@/hooks/usePlatformSettings";
 
 interface SupportedCoin {
   coin_id: string;
@@ -32,7 +31,7 @@ const fetchSupportedCoins = async (): Promise<SupportedCoin[]> => {
   return (data ?? []) as SupportedCoin[];
 };
 
-const fetchCoins = async (): Promise<CoinData[]> => {
+const fetchCoins = async (krwRate: number, priceMarkup: number): Promise<CoinData[]> => {
   const supportedCoins = await fetchSupportedCoins();
   if (supportedCoins.length === 0) return mockCoins;
 
@@ -82,7 +81,7 @@ const fetchCoins = async (): Promise<CoinData[]> => {
       volume24h = 0;
     }
 
-    const priceKrw = priceUsd * KRW_FALLBACK * PRICE_MARKUP;
+    const priceKrw = priceUsd * krwRate * priceMarkup;
     const volatility = priceUsd * 0.01;
 
     return {
@@ -103,9 +102,11 @@ const fetchCoins = async (): Promise<CoinData[]> => {
 };
 
 export const useCryptoData = () => {
+  const { krwRate, sellSpread } = usePlatformSettings();
+
   const query = useQuery<CoinData[]>({
-    queryKey: ["crypto-markets"],
-    queryFn: fetchCoins,
+    queryKey: ["crypto-markets", krwRate, sellSpread],
+    queryFn: () => fetchCoins(krwRate, sellSpread),
     refetchInterval: 3000,
     staleTime: 2500,
     placeholderData: mockCoins,

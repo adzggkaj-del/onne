@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { chains, formatKRW, type ChainInfo } from "@/lib/cryptoData";
 import { useCryptoData } from "@/hooks/useCryptoData";
+import { usePlatformSettings } from "@/hooks/usePlatformSettings";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import AnimatedPage from "@/components/AnimatedPage";
@@ -16,13 +17,11 @@ import ChainIcon from "@/components/ChainIcon";
 import PriceFlash from "@/components/PriceFlash";
 import { toast } from "@/hooks/use-toast";
 
-const DAILY_RATE = 0.001;
-const TERM_DAYS = 30;
-
 const LendingFormPage = () => {
   const { coinId } = useParams<{ coinId: string }>();
   const navigate = useNavigate();
   const { data: coins = [] } = useCryptoData();
+  const { lendingDailyRate, lendingTermDays } = usePlatformSettings();
   const { user } = useAuth();
 
   const selectedCoin = coins.find((c) => c.id === coinId) ?? null;
@@ -34,7 +33,7 @@ const LendingFormPage = () => {
   const [confirmed, setConfirmed] = useState(false);
 
   const loanKrw = selectedCoin ? (amount * selectedCoin.priceKrw) / 100 : 0;
-  const totalInterest = loanKrw * DAILY_RATE * TERM_DAYS;
+  const totalInterest = loanKrw * lendingDailyRate * lendingTermDays;
   const totalRepay = loanKrw + totalInterest;
 
   const handleConfirm = async () => {
@@ -142,7 +141,7 @@ const LendingFormPage = () => {
                       ["대출 비율", `${amount}%`],
                       ["대출 금액", formatKRW(loanKrw)],
                       ["일일 이자율", "0.1%"],
-                      ["대출 기간", `${TERM_DAYS}일`],
+                      ["대출 기간", `${lendingTermDays}일`],
                       ["총 이자", formatKRW(totalInterest)],
                     ].map(([label, value]) => (
                       <div key={label} className="flex justify-between">
@@ -170,7 +169,7 @@ const LendingFormPage = () => {
                     ["대출 금액", formatKRW(loanKrw)],
                     ["총 이자", formatKRW(totalInterest)],
                     ["만기 상환 금액", formatKRW(totalRepay)],
-                    ["상환 예정일", new Date(Date.now() + TERM_DAYS * 86400000).toLocaleDateString("ko-KR")],
+                    ["상환 예정일", new Date(Date.now() + lendingTermDays * 86400000).toLocaleDateString("ko-KR")],
                   ].map(([label, value]) => (
                     <div key={label} className="flex justify-between text-sm">
                       <span className="text-muted-foreground">{label}</span><span>{value}</span>
@@ -204,7 +203,7 @@ const LendingFormPage = () => {
               <Check className="h-8 w-8 text-success" />
             </div>
             <p className="font-semibold">대출 신청이 완료되었습니다!</p>
-            <p className="text-sm text-muted-foreground">상환 예정일: {new Date(Date.now() + TERM_DAYS * 86400000).toLocaleDateString("ko-KR")}</p>
+            <p className="text-sm text-muted-foreground">상환 예정일: {new Date(Date.now() + lendingTermDays * 86400000).toLocaleDateString("ko-KR")}</p>
             <Button variant="outline" className="border-border/50" onClick={() => navigate("/lending")}>코인 목록으로</Button>
           </div>
         )}
