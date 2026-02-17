@@ -4,14 +4,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatKRW, formatVolume } from "@/lib/cryptoData";
 import { useCryptoData } from "@/hooks/useCryptoData";
+import { usePlatformSettings } from "@/hooks/usePlatformSettings";
 import AnimatedPage from "@/components/AnimatedPage";
 import CoinIcon from "@/components/CoinIcon";
 import PriceFlash from "@/components/PriceFlash";
 
-const SELL_MARKUP = 1.01;
-
 const SellPage = () => {
   const { data: coins = [] } = useCryptoData();
+  const { sellSpread } = usePlatformSettings();
   const navigate = useNavigate();
 
   return (
@@ -22,7 +22,7 @@ const SellPage = () => {
 
         <div className="space-y-2">
           {coins.map((coin, index) => {
-            const markupPrice = coin.priceKrw * SELL_MARKUP;
+            const markupPrice = coin.priceKrw * sellSpread;
             return (
               <Card key={coin.id} className="bg-card border-border/50 hover:border-primary/20 transition-all">
                 <CardContent className="p-3 md:p-4">
