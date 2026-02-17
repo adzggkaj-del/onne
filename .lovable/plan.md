@@ -1,95 +1,69 @@
 
 
-## 全面重构：Binance API + 内联表单 + 借贷行情列表
+## 交互页面独立化：币种列表页与交易表单页分离
 
-### 问题诊断
+### 概述
 
-从网络请求日志可以看到，CoinGecko API 每秒请求都返回 "Failed to fetch"（速率限制），偶尔成功一次。这是行情不实时的根本原因。
+将买币、卖币、借贷三个页面中的"行情列表 + 内联表单"拆分为两个独立页面：
+- **列表页**（`/buy`, `/sell`, `/lending`）：仅展示币种行情列表，点击按钮跳转到交易页
+- **交易页**（`/buy/:coinId`, `/sell/:coinId`, `/lending/:coinId`）：独立页面完成所有交互步骤
 
----
-
-### 1. 替换 CoinGecko 为 Binance API（客户端直连）
-
-**文件**：`src/hooks/useCryptoData.ts`
-
-- 移除 CoinGecko API 调用
-- 改用 Binance 公开 API（无需 Key，速率限制 6000 req/min）：
-  - `GET https://api.binance.com/api/v3/ticker/24hr` 获取 24h 价格变动
-  - 使用 USDT 交易对（BTCUSDT、ETHUSDT 等），再乘以 KRW 汇率
-- `refetchInterval` 设为 3000ms（每 3 秒从 Binance 获取真实数据）
-- 添加客户端微波动逻辑：使用 `useState` + `useEffect` 创建 1 秒定时器，对缓存数据施加 +/-0.01%~0.05% 随机偏移，触发 PriceFlash 闪烁
-- 在 `cryptoData.ts` 中添加 CoinGecko ID 到 Binance symbol 的映射表
-
-**数据映射**：
-| coin_id | Binance Symbol |
-|---------|---------------|
-| bitcoin | BTCUSDT |
-| ethereum | ETHUSDT |
-| binancecoin | BNBUSDT |
-| solana | SOLUSDT |
-| ripple | XRPUSDT |
-| tron | TRXUSDT |
-| matic-network | MATICUSDT |
-| tether | 固定 1 USD |
+这样未来币种增多时，列表页不会因为底部表单而影响体验。
 
 ---
 
-### 2. 买币页面改为内联表单（`src/pages/BuyPage.tsx`）
+### 修改内容
 
-移除 Dialog 组件，改为页面内两段式布局：
+#### 1. 新建 3 个交易表单页面
 
-- **上半部分**：币种行情列表（价格 = 市场价 x 0.99），每行末尾"购买"按钮
-- **下半部分**：点击"购买"后，在页面下方展开内联表单卡片
-  - Step 1: 选择链（卡片网格）
-  - Step 2: 输入购买数量 + 费用摘要
-  - Step 3: 填写收币地址
-  - Step 4: 确认信息并提交
-  - "上一步/下一步"按钮在步骤间切换
+- **`src/pages/BuyFormPage.tsx`**：接收 URL 参数 `coinId`，从 `useCryptoData` 中找到对应币种，展示完整的多步交易表单（选链 -> 数量 -> 收币地址 -> 确认），完成后可返回列表页
+- **`src/pages/SellFormPage.tsx`**：同上，包含选链 -> 数量 -> 银行信息 -> 充币地址+QR码 -> 确认
+- **`src/pages/LendingFormPage.tsx`**：同上，包含选链 -> 抵押比例滑块 -> 确认
 
----
+每个页面顶部显示选中币种的信息卡片（图标、名称、当前价格），下方为步骤表单。
 
-### 3. 卖币页面改为内联表单（`src/pages/SellPage.tsx`）
+#### 2. 简化现有 3 个列表页
 
-同样移除 Dialog，改为页面内布局：
+- **`src/pages/BuyPage.tsx`**：移除所有内联表单代码和相关 state，"购买"按钮改为 `navigate(`/buy/${coin.id}`)`
+- **`src/pages/SellPage.tsx`**：同上，"卖出"按钮改为 `navigate(`/sell/${coin.id}`)`
+- **`src/pages/LendingPage.tsx`**：同上，"대출"按钮改为 `navigate(`/lending/${coin.id}`)`
 
-- **上半部分**：币种行情列表（价格 = 市场价 x 1.01），每行"卖出"按钮
-- **下半部分**：内联表单
-  - Step 1: 选择链
-  - Step 2: 输入卖出数量 + 费用摘要
-  - Step 3: 银行卡信息（银行名、账号、户名）
-  - Step 4: 平台充币地址 + QR 码
-  - Step 5: 确认并提交
+#### 3. 更新路由配置
 
----
-
-### 4. 借贷页面增加行情列表 + 内联表单（`src/pages/LendingPage.tsx`）
-
-重构为与买卖页面一致的风格：
-
-- **上半部分**：币种行情列表（显示原价），每行"대출"按钮
-- **下半部分**：点击后展开内联表单
-  - Step 1: 选择链
-  - Step 2: 大出比例滑块（10%-100%）+ 贷款摘要
-  - Step 3: 确认提交
+在 `src/App.tsx` 中添加 3 条新路由：
+```text
+/buy/:coinId    -> BuyFormPage
+/sell/:coinId   -> SellFormPage
+/lending/:coinId -> LendingFormPage
+```
+均包裹在 `ProtectedRoute` 和 `Layout` 中。
 
 ---
 
 ### 技术细节
 
-**修改文件清单**：
-- `src/hooks/useCryptoData.ts` -- Binance API + 微波动逻辑
-- `src/lib/cryptoData.ts` -- 添加 Binance symbol 映射
-- `src/pages/BuyPage.tsx` -- 内联表单重构
-- `src/pages/SellPage.tsx` -- 内联表单重构
-- `src/pages/LendingPage.tsx` -- 添加行情列表 + 内联表单重构
+**文件变更清单**：
+- 新建：`src/pages/BuyFormPage.tsx`
+- 新建：`src/pages/SellFormPage.tsx`
+- 新建：`src/pages/LendingFormPage.tsx`
+- 修改：`src/pages/BuyPage.tsx` -- 移除表单，按钮改为路由跳转
+- 修改：`src/pages/SellPage.tsx` -- 同上
+- 修改：`src/pages/LendingPage.tsx` -- 同上
+- 修改：`src/App.tsx` -- 添加 3 条动态路由
 
-**客户端微波动实现**：
-- `useCryptoData` 返回的数据每 3 秒从 Binance 更新
-- 组件层面用 `useEffect` 每 1 秒 clone 数据并施加微小随机偏移
-- 偏移范围：价格 +/-0.01%~0.05%
-- 这样即使 Binance 数据 3 秒才更新，页面每秒都有价格跳动效果
+**路由参数获取**：使用 `useParams<{ coinId: string }>()` 从 URL 获取 `coinId`，再从 `useCryptoData()` 中匹配对应币种数据。
 
-**KRW 汇率**：先尝试从 Binance 获取 USDTKRW，失败则使用固定汇率 1380。
+**导航方式**：
+- 列表页点击按钮使用 `useNavigate()` 跳转
+- 交易页"取消"/"返回"按钮使用 `navigate(-1)` 或 `navigate('/buy')` 返回列表
+- 交易完成后提供"返回列表"按钮
 
-**Sparkline 数据**：Binance 不直接提供 sparkline，改用 mockCoins 中的 `generateSparkline` 函数以当前价格为基准生成 24 点模拟数据，每次 API 刷新时重新生成。
+**交易表单页面结构**：
+```text
+[返回按钮]
+[币种信息卡片：图标 + 名称 + 当前价格]
+[步骤指示器：Step 1/2/3/4]
+[当前步骤表单内容]
+[上一步/下一步 按钮]
+```
 
