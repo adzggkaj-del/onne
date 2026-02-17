@@ -7,8 +7,11 @@ import Layout from "./components/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Index from "./pages/Index";
 import BuyPage from "./pages/BuyPage";
+import BuyFormPage from "./pages/BuyFormPage";
 import SellPage from "./pages/SellPage";
+import SellFormPage from "./pages/SellFormPage";
 import LendingPage from "./pages/LendingPage";
+import LendingFormPage from "./pages/LendingFormPage";
 import AssetsPage from "./pages/AssetsPage";
 import AuthPage from "./pages/AuthPage";
 import NotFound from "./pages/NotFound";
@@ -25,8 +28,11 @@ const App = () => (
           <Route element={<Layout />}>
             <Route path="/" element={<Index />} />
             <Route path="/buy" element={<ProtectedRoute><BuyPage /></ProtectedRoute>} />
+            <Route path="/buy/:coinId" element={<ProtectedRoute><BuyFormPage /></ProtectedRoute>} />
             <Route path="/sell" element={<ProtectedRoute><SellPage /></ProtectedRoute>} />
+            <Route path="/sell/:coinId" element={<ProtectedRoute><SellFormPage /></ProtectedRoute>} />
             <Route path="/lending" element={<ProtectedRoute><LendingPage /></ProtectedRoute>} />
+            <Route path="/lending/:coinId" element={<ProtectedRoute><LendingFormPage /></ProtectedRoute>} />
             <Route path="/assets" element={<ProtectedRoute><AssetsPage /></ProtectedRoute>} />
             <Route path="/auth" element={<AuthPage />} />
           </Route>
