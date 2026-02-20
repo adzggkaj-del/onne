@@ -1,110 +1,98 @@
 
+## 价格系数全面控制方案
 
-## 后台管理系统实现方案
+### 问题分析
 
-### 概述
+当前 `useCryptoData` 将 `sellSpread`（1.01）直接乘进了基准 `priceKrw`，导致：
 
-为 CryptoX 构建完整的后台管理系统，包括数据库角色系统、平台配置表、管理后台 UI，以及将前端硬编码参数迁移为动态配置。
+- 首页 / 借贷页：显示的是已上浮 1% 的价格，而非纯市价
+- 买币页：基准价 × 0.99 ≈ 市价（买入折扣消失）
+- 卖币页：基准价 × 1.01 ≈ 市价 × 1.02（double 上浮）
 
----
+后台修改 `buy_spread` / `sell_spread` 的值对前端**实际没有正确生效**。
 
-### 第一步：数据库迁移
+### 目标架构
 
-创建一个数据库迁移，包含以下内容：
-
-**1. 角色系统**
-- 创建 `app_role` 枚举（`admin`, `moderator`, `user`）
-- 创建 `user_roles` 表（`user_id`, `role`，唯一约束）
-- 创建 `has_role()` SECURITY DEFINER 函数
-- 为 `user_roles` 启用 RLS，仅管理员可读写
-
-**2. 平台设置表 `platform_settings`**
-- 字段：`id`, `key`(unique), `value`, `label`, `description`, `updated_at`
-- 预置 6 项配置：`buy_spread=0.99`, `sell_spread=1.01`, `trade_fee_rate=0.001`, `lending_daily_rate=0.001`, `lending_term_days=30`, `krw_rate=1380`
-- RLS：认证用户可读，管理员可更新
-
-**3. 扩展现有表 RLS**
-- `supported_coins`：管理员可 INSERT/UPDATE/DELETE
-- `profiles`：管理员可 SELECT 所有用户
-- `orders`：管理员可 SELECT/UPDATE 所有订单
-
----
-
-### 第二步：新建前端文件
-
-**Hooks：**
-- `src/hooks/usePlatformSettings.ts` -- 使用 React Query 从 `platform_settings` 读取配置，返回 `{ buySpread, sellSpread, tradeFeeRate, lendingDailyRate, lendingTermDays, krwRate, isLoading }`
-- `src/hooks/useAdmin.ts` -- 查询 `user_roles` 判断当前用户是否为 admin
-
-**组件：**
-- `src/components/AdminRoute.tsx` -- 路由守卫，非管理员重定向到首页
-- `src/components/AdminLayout.tsx` -- 管理后台独立布局，左侧导航栏（仪表盘、用户、币种、设置、订单）
-
-**管理页面：**
-- `src/pages/admin/AdminDashboard.tsx` -- 概览（用户数、订单数、币种数等统计卡片）
-- `src/pages/admin/AdminUsers.tsx` -- 用户列表，可切换 verified 状态
-- `src/pages/admin/AdminCoins.tsx` -- 币种 CRUD，启用/禁用，排序
-- `src/pages/admin/AdminSettings.tsx` -- 表单编辑所有 platform_settings 配置项
-- `src/pages/admin/AdminOrders.tsx` -- 全部订单列表，可更新状态
-
----
-
-### 第三步：修改现有文件
-
-**路由 (`src/App.tsx`)：**
-- 添加 `/admin` 路由组，使用 `AdminRoute` + `AdminLayout` 包裹所有管理页面
-
-**替换硬编码值：**
-- `BuyPage.tsx`：`BUY_DISCOUNT = 0.99` 改为从 `usePlatformSettings` 读取
-- `BuyFormPage.tsx`：同上，买币价格系数 + 手续费率
-- `SellPage.tsx`：`SELL_MARKUP = 1.01` 改为动态读取
-- `SellFormPage.tsx`：同上
-- `LendingFormPage.tsx`：`DAILY_RATE = 0.001` 和 `TERM_DAYS = 30` 改为动态读取
-- `useCryptoData.ts`：`PRICE_MARKUP = 1.01` 和 `KRW_FALLBACK = 1380` 改为从 settings 读取（通过参数传入或直接查询）
-
----
-
-### 技术细节
-
-**数据库查询方式：**
-由于 `platform_settings` 和 `user_roles` 是新表，TypeScript 类型尚未自动生成。代码中需要使用 `.from("platform_settings")` 并手动定义接口类型，直到类型文件自动更新。
-
-**`usePlatformSettings` 实现思路：**
 ```text
-从 platform_settings SELECT 所有行
-转换为 key-value map
-返回带默认值的配置对象（防止数据未加载时出错）
-使用 React Query 缓存 5 分钟
+纯基准价 = priceUsd × krwRate          （useCryptoData 输出）
+首页显示 = 纯基准价 × home_spread       （初始值 1.0）
+借贷页显示 = 纯基准价 × lending_spread  （初始值 1.0）
+买币页显示 = 纯基准价 × buy_spread      （初始值 0.99）
+卖币页显示 = 纯基准价 × sell_spread     （初始值 1.01）
 ```
 
-**`useCryptoData` 修改方式：**
-将 `PRICE_MARKUP` 和 `KRW_FALLBACK` 从模块级常量改为函数参数或内部查询，使其可以使用动态配置值。
-
-**管理后台 UI 风格：**
-保持与前台一致的暗色主题，使用相同的 UI 组件库（shadcn/ui），独立的侧边栏导航。
+所有 spread 值均来自后台 `platform_settings`，管理员可随时调整。
 
 ---
+
+### 第一步：数据库 - 新增两个设置项
+
+在 `platform_settings` 表插入两条新记录：
+
+| key | value | label | description |
+|-----|-------|-------|-------------|
+| `home_spread` | `1.0` | 首页价格系数 | 首页行情展示价格系数，1.0 表示显示纯市价 |
+| `lending_spread` | `1.0` | 借贷页价格系数 | 借贷页担保品估值系数，1.0 表示显示纯市价 |
+
+---
+
+### 第二步：修改 `src/hooks/usePlatformSettings.ts`
+
+- 在 `DEFAULTS` 中添加 `home_spread: "1.0"` 和 `lending_spread: "1.0"`
+- 在返回对象中添加 `homeSpread` 和 `lendingSpread` 两个字段
+- 更新 `PlatformSettings` interface
+
+---
+
+### 第三步：修改 `src/hooks/useCryptoData.ts`
+
+核心修复：将基准价从 `priceUsd × krwRate × sellSpread` 改为 `priceUsd × krwRate`（纯净基准价）。
+
+- `fetchCoins` 参数从 `(krwRate, priceMarkup)` 改为只接收 `krwRate`
+- 计算改为：`const priceKrw = priceUsd * krwRate`
+- `useCryptoData` 内部只取 `krwRate`，`queryKey` 只依赖 `krwRate`
+
+---
+
+### 第四步：修改各展示页面，应用对应 spread
+
+**`src/pages/Index.tsx`（首页）**
+- 引入 `usePlatformSettings`，取 `homeSpread`
+- 展示价格改为：`coin.priceKrw * homeSpread`
+
+**`src/pages/LendingPage.tsx`（借贷列表页）**
+- 引入 `usePlatformSettings`，取 `lendingSpread`
+- 展示价格改为：`coin.priceKrw * lendingSpread`
+
+**`src/pages/BuyPage.tsx` / `src/pages/SellPage.tsx`**
+- 逻辑本身已正确（各自乘以 buySpread / sellSpread），修复基准价后自然正确，无需改动
+
+---
+
+### 第五步：移除遗留常量
+
+**`src/lib/cryptoData.ts`**
+- 删除 `export const PRICE_MARKUP = 1.01`
+- `mockCoins` 中的 `priceKrw` 改为 `priceUsd * KRW_RATE`（去掉 `PRICE_MARKUP` 因子），保证 fallback 数据与真实逻辑一致
+
+---
+
+### 修复后各页面价格对比
+
+| 页面 | 修复前 | 修复后 |
+|------|--------|--------|
+| 首页 | 市价 × 1.01（固定，不受后台控制） | 市价 × home_spread（后台可调，默认 1.0） |
+| 借贷页 | 市价 × 1.01（固定） | 市价 × lending_spread（默认 1.0） |
+| 买币页 | 市价 × 1.01 × 0.99 ≈ 市价 | 市价 × buy_spread（默认 0.99，正确打折） |
+| 卖币页 | 市价 × 1.01 × 1.01 ≈ 市价 × 1.02 | 市价 × sell_spread（默认 1.01，正确上浮） |
 
 ### 文件变更清单
 
 | 操作 | 文件 |
 |------|------|
-| 数据库迁移 | 角色系统 + platform_settings + RLS 扩展 |
-| 新建 | `src/hooks/usePlatformSettings.ts` |
-| 新建 | `src/hooks/useAdmin.ts` |
-| 新建 | `src/components/AdminRoute.tsx` |
-| 新建 | `src/components/AdminLayout.tsx` |
-| 新建 | `src/pages/admin/AdminDashboard.tsx` |
-| 新建 | `src/pages/admin/AdminUsers.tsx` |
-| 新建 | `src/pages/admin/AdminCoins.tsx` |
-| 新建 | `src/pages/admin/AdminSettings.tsx` |
-| 新建 | `src/pages/admin/AdminOrders.tsx` |
-| 修改 | `src/App.tsx` |
-| 修改 | `src/pages/BuyPage.tsx` |
-| 修改 | `src/pages/BuyFormPage.tsx` |
-| 修改 | `src/pages/SellPage.tsx` |
-| 修改 | `src/pages/SellFormPage.tsx` |
-| 修改 | `src/pages/LendingFormPage.tsx` |
+| 数据库 INSERT | platform_settings：新增 home_spread、lending_spread |
+| 修改 | `src/hooks/usePlatformSettings.ts` |
 | 修改 | `src/hooks/useCryptoData.ts` |
+| 修改 | `src/pages/Index.tsx` |
+| 修改 | `src/pages/LendingPage.tsx` |
 | 修改 | `src/lib/cryptoData.ts` |
-
