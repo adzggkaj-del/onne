@@ -4,12 +4,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatKRW, formatVolume } from "@/lib/cryptoData";
 import { useCryptoData } from "@/hooks/useCryptoData";
+import { usePlatformSettings } from "@/hooks/usePlatformSettings";
 import AnimatedPage from "@/components/AnimatedPage";
 import CoinIcon from "@/components/CoinIcon";
 import PriceFlash from "@/components/PriceFlash";
 
 const LendingPage = () => {
   const { data: coins = [] } = useCryptoData();
+  const { lendingSpread } = usePlatformSettings();
   const navigate = useNavigate();
 
   return (
@@ -32,8 +34,8 @@ const LendingPage = () => {
                     </div>
                   </div>
                   <div className="text-right">
-                    <PriceFlash value={coin.priceKrw}>
-                      <span className="font-semibold text-sm">{formatKRW(coin.priceKrw)}</span>
+                    <PriceFlash value={coin.priceKrw * lendingSpread}>
+                      <span className="font-semibold text-sm">{formatKRW(coin.priceKrw * lendingSpread)}</span>
                     </PriceFlash>
                     <p className="text-xs text-muted-foreground">{formatVolume(coin.volume24h)}</p>
                   </div>

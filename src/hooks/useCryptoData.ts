@@ -31,7 +31,7 @@ const fetchSupportedCoins = async (): Promise<SupportedCoin[]> => {
   return (data ?? []) as SupportedCoin[];
 };
 
-const fetchCoins = async (krwRate: number, priceMarkup: number): Promise<CoinData[]> => {
+const fetchCoins = async (krwRate: number): Promise<CoinData[]> => {
   const supportedCoins = await fetchSupportedCoins();
   if (supportedCoins.length === 0) return mockCoins;
 
@@ -81,7 +81,7 @@ const fetchCoins = async (krwRate: number, priceMarkup: number): Promise<CoinDat
       volume24h = 0;
     }
 
-    const priceKrw = priceUsd * krwRate * priceMarkup;
+    const priceKrw = priceUsd * krwRate;
     const volatility = priceUsd * 0.01;
 
     return {
@@ -102,11 +102,11 @@ const fetchCoins = async (krwRate: number, priceMarkup: number): Promise<CoinDat
 };
 
 export const useCryptoData = () => {
-  const { krwRate, sellSpread } = usePlatformSettings();
+  const { krwRate } = usePlatformSettings();
 
   const query = useQuery<CoinData[]>({
-    queryKey: ["crypto-markets", krwRate, sellSpread],
-    queryFn: () => fetchCoins(krwRate, sellSpread),
+    queryKey: ["crypto-markets", krwRate],
+    queryFn: () => fetchCoins(krwRate),
     refetchInterval: 3000,
     staleTime: 2500,
     placeholderData: mockCoins,
