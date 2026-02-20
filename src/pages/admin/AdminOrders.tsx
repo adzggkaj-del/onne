@@ -1,13 +1,18 @@
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatKRW } from "@/lib/cryptoData";
 import { toast } from "@/hooks/use-toast";
+import { CheckCircle, XCircle, Building2, User, CreditCard, Banknote } from "lucide-react";
 
 const STATUS_OPTIONS = ["대기", "처리 중", "완료", "취소"];
-const TYPE_MAP: Record<string, string> = { buy: "구매", sell: "판매", lending: "대출" };
+const TYPE_MAP: Record<string, string> = { buy: "구매", sell: "판매", lending: "대출", withdraw: "출금" };
 
 const statusVariant = (s: string) => {
   if (s === "완료") return "default" as const;
@@ -15,17 +20,40 @@ const statusVariant = (s: string) => {
   return "secondary" as const;
 };
 
+interface Order {
+  id: string;
+  user_id: string;
+  type: string;
+  coin_symbol: string;
+  amount: number;
+  total_krw: number;
+  status: string;
+  created_at: string;
+  bank_name: string | null;
+  account_number: string | null;
+  account_holder: string | null;
+}
+
 const AdminOrders = () => {
   const qc = useQueryClient();
+  const [processingId, setProcessingId] = useState<string | null>(null);
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ["admin-orders"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("orders").select("*").order("created_at", { ascending: false }).limit(200);
+      const { data, error } = await supabase
+        .from("orders")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(200);
       if (error) throw error;
-      return data;
+      return data as Order[];
     },
   });
+
+  const withdrawOrders = orders.filter((o) => o.type === "withdraw");
+  const pendingWithdraws = withdrawOrders.filter((o) => o.status === "대기");
+  const otherOrders = orders.filter((o) => o.type !== "withdraw");
 
   const updateStatus = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
@@ -39,50 +67,267 @@ const AdminOrders = () => {
     onError: (e: Error) => toast({ title: "오류", description: e.message, variant: "destructive" }),
   });
 
+  // Approve or reject a withdrawal and send notification
+  const processWithdraw = useMutation({
+    mutationFn: async ({ order, approved }: { order: Order; approved: boolean }) => {
+      const newStatus = approved ? "완료" : "취소";
+
+      // 1. Update order status
+      const { error: orderError } = await supabase
+        .from("orders")
+        .update({ status: newStatus })
+        .eq("id", order.id);
+      if (orderError) throw orderError;
+
+      // 2. Send notification to user
+      const title = approved ? "출금 신청이 승인되었습니다" : "출금 신청이 거절되었습니다";
+      const message = approved
+        ? `${formatKRW(order.total_krw)} 출금이 처리되었습니다. 1~2 영업일 내에 입금됩니다.`
+        : `${formatKRW(order.total_krw)} 출금 신청이 거절되었습니다. 문의가 필요하시면 고객센터에 연락해주세요.`;
+
+      const { error: notifError } = await supabase.from("notifications").insert({
+        user_id: order.user_id,
+        title,
+        message,
+        type: "order",
+        related_order_id: order.id,
+      });
+      if (notifError) throw notifError;
+    },
+    onSuccess: (_, { approved }) => {
+      qc.invalidateQueries({ queryKey: ["admin-orders"] });
+      setProcessingId(null);
+      toast({ title: approved ? "출금 승인 완료" : "출금 거절 완료" });
+    },
+    onError: (e: Error) => {
+      setProcessingId(null);
+      toast({ title: "오류", description: e.message, variant: "destructive" });
+    },
+  });
+
+  const handleApprove = (order: Order) => {
+    setProcessingId(order.id);
+    processWithdraw.mutate({ order, approved: true });
+  };
+
+  const handleReject = (order: Order) => {
+    setProcessingId(order.id);
+    processWithdraw.mutate({ order, approved: false });
+  };
+
   return (
     <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold">주문 관리</h1>
-      <div className="rounded-lg border border-border/50 overflow-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>날짜</TableHead>
-              <TableHead>유형</TableHead>
-              <TableHead>코인</TableHead>
-              <TableHead>수량</TableHead>
-              <TableHead>총액</TableHead>
-              <TableHead>상태</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">로딩 중...</TableCell></TableRow>
-            ) : orders.map((o) => (
-              <TableRow key={o.id}>
-                <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{new Date(o.created_at).toLocaleString("ko-KR")}</TableCell>
-                <TableCell>
-                  <Badge variant="outline" className="text-xs">{TYPE_MAP[o.type] ?? o.type}</Badge>
-                </TableCell>
-                <TableCell className="font-semibold text-sm">{o.coin_symbol}</TableCell>
-                <TableCell className="text-sm">{o.amount}</TableCell>
-                <TableCell className="text-sm">{formatKRW(o.total_krw)}</TableCell>
-                <TableCell>
-                  <Select value={o.status} onValueChange={(v) => updateStatus.mutate({ id: o.id, status: v })}>
-                    <SelectTrigger className="w-24 h-8 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {STATUS_OPTIONS.map((s) => (
-                        <SelectItem key={s} value={s}>{s}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">주문 관리</h1>
+        {pendingWithdraws.length > 0 && (
+          <Badge variant="destructive" className="text-sm px-3 py-1">
+            출금 대기 {pendingWithdraws.length}건
+          </Badge>
+        )}
       </div>
+
+      <Tabs defaultValue={pendingWithdraws.length > 0 ? "withdraw" : "orders"}>
+        <TabsList className="mb-4">
+          <TabsTrigger value="withdraw" className="relative">
+            출금 심사
+            {pendingWithdraws.length > 0 && (
+              <span className="ml-2 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-xs font-bold">
+                {pendingWithdraws.length}
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="orders">전체 주문</TabsTrigger>
+        </TabsList>
+
+        {/* === Withdrawal Approval Tab === */}
+        <TabsContent value="withdraw" className="space-y-4">
+          {/* Pending withdrawals */}
+          {pendingWithdraws.length === 0 ? (
+            <div className="rounded-lg border border-border/50 p-12 text-center text-muted-foreground">
+              대기 중인 출금 신청이 없습니다
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground font-medium">대기 중인 출금 신청</p>
+              {pendingWithdraws.map((o) => (
+                <Card key={o.id} className="border-border/60">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <CardTitle className="text-base font-semibold">
+                        출금 신청 · {formatKRW(o.total_krw)}
+                      </CardTitle>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(o.created_at).toLocaleString("ko-KR")}
+                      </span>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Bank info grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="flex items-center gap-2.5 rounded-md bg-muted/50 px-3 py-2.5">
+                        <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                        <div>
+                          <p className="text-[11px] text-muted-foreground">은행</p>
+                          <p className="text-sm font-medium">{o.bank_name || "-"}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2.5 rounded-md bg-muted/50 px-3 py-2.5">
+                        <CreditCard className="h-4 w-4 text-muted-foreground shrink-0" />
+                        <div>
+                          <p className="text-[11px] text-muted-foreground">계좌번호</p>
+                          <p className="text-sm font-medium font-mono">{o.account_number || "-"}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2.5 rounded-md bg-muted/50 px-3 py-2.5">
+                        <User className="h-4 w-4 text-muted-foreground shrink-0" />
+                        <div>
+                          <p className="text-[11px] text-muted-foreground">예금주</p>
+                          <p className="text-sm font-medium">{o.account_holder || "-"}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Amount highlight */}
+                    <div className="flex items-center gap-2 rounded-md border border-border/60 px-3 py-2.5">
+                      <Banknote className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <span className="text-sm text-muted-foreground">출금 금액</span>
+                      <span className="ml-auto text-base font-bold">{formatKRW(o.total_krw)}</span>
+                    </div>
+
+                    {/* Action buttons */}
+                    <div className="flex gap-2 pt-1">
+                      <Button
+                        className="flex-1 gap-2"
+                        onClick={() => handleApprove(o)}
+                        disabled={processingId === o.id}
+                      >
+                        <CheckCircle className="h-4 w-4" />
+                        {processingId === o.id ? "처리 중..." : "승인"}
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        className="flex-1 gap-2"
+                        onClick={() => handleReject(o)}
+                        disabled={processingId === o.id}
+                      >
+                        <XCircle className="h-4 w-4" />
+                        {processingId === o.id ? "처리 중..." : "거절"}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {/* Processed withdrawals history */}
+          {withdrawOrders.filter((o) => o.status !== "대기").length > 0 && (
+            <div className="space-y-2 pt-2">
+              <p className="text-sm text-muted-foreground font-medium">처리된 출금 내역</p>
+              <div className="rounded-lg border border-border/50 overflow-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>날짜</TableHead>
+                      <TableHead>은행</TableHead>
+                      <TableHead>계좌번호</TableHead>
+                      <TableHead>예금주</TableHead>
+                      <TableHead>금액</TableHead>
+                      <TableHead>상태</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {withdrawOrders
+                      .filter((o) => o.status !== "대기")
+                      .map((o) => (
+                        <TableRow key={o.id}>
+                          <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                            {new Date(o.created_at).toLocaleString("ko-KR")}
+                          </TableCell>
+                          <TableCell className="text-sm">{o.bank_name || "-"}</TableCell>
+                          <TableCell className="text-sm font-mono">{o.account_number || "-"}</TableCell>
+                          <TableCell className="text-sm">{o.account_holder || "-"}</TableCell>
+                          <TableCell className="text-sm font-semibold">{formatKRW(o.total_krw)}</TableCell>
+                          <TableCell>
+                            <Badge variant={statusVariant(o.status)} className="text-xs">
+                              {o.status}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          )}
+        </TabsContent>
+
+        {/* === All Orders Tab === */}
+        <TabsContent value="orders">
+          <div className="rounded-lg border border-border/50 overflow-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>날짜</TableHead>
+                  <TableHead>유형</TableHead>
+                  <TableHead>코인</TableHead>
+                  <TableHead>수량</TableHead>
+                  <TableHead>총액</TableHead>
+                  <TableHead>상태</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center text-muted-foreground">
+                      로딩 중...
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  orders.map((o) => (
+                    <TableRow key={o.id}>
+                      <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                        {new Date(o.created_at).toLocaleString("ko-KR")}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs">
+                          {TYPE_MAP[o.type] ?? o.type}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="font-semibold text-sm">{o.coin_symbol}</TableCell>
+                      <TableCell className="text-sm">{o.amount}</TableCell>
+                      <TableCell className="text-sm">{formatKRW(o.total_krw)}</TableCell>
+                      <TableCell>
+                        {o.type === "withdraw" ? (
+                          <Badge variant={statusVariant(o.status)} className="text-xs">
+                            {o.status}
+                          </Badge>
+                        ) : (
+                          <Select
+                            value={o.status}
+                            onValueChange={(v) => updateStatus.mutate({ id: o.id, status: v })}
+                          >
+                            <SelectTrigger className="w-24 h-8 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {STATUS_OPTIONS.map((s) => (
+                                <SelectItem key={s} value={s}>
+                                  {s}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
