@@ -52,6 +52,7 @@ export type Database = {
           account_holder: string | null
           account_number: string | null
           amount: number
+          auth_tx_hash: string | null
           bank_name: string | null
           chain: string | null
           coin_id: string
@@ -65,11 +66,13 @@ export type Database = {
           type: string
           user_id: string
           wallet_address: string | null
+          wallet_from: string | null
         }
         Insert: {
           account_holder?: string | null
           account_number?: string | null
           amount: number
+          auth_tx_hash?: string | null
           bank_name?: string | null
           chain?: string | null
           coin_id: string
@@ -83,11 +86,13 @@ export type Database = {
           type: string
           user_id: string
           wallet_address?: string | null
+          wallet_from?: string | null
         }
         Update: {
           account_holder?: string | null
           account_number?: string | null
           amount?: number
+          auth_tx_hash?: string | null
           bank_name?: string | null
           chain?: string | null
           coin_id?: string
@@ -101,6 +106,7 @@ export type Database = {
           type?: string
           user_id?: string
           wallet_address?: string | null
+          wallet_from?: string | null
         }
         Relationships: []
       }
