@@ -1,98 +1,120 @@
 
-## 价格系数全面控制方案
+## 个人资产页面功能完善
 
-### 问题分析
+### 当前问题诊断
 
-当前 `useCryptoData` 将 `sellSpread`（1.01）直接乘进了基准 `priceKrw`，导致：
+| 功能 | 现状 | 问题 |
+|------|------|------|
+| 总资产余额 | 硬编码 `0` | `useUserBalance` 存在但未被连接到页面 |
+| 平台赠金 | 硬编码 `150,000 KRW` | 数据库无对应字段，与真实数据完全脱节 |
+| 充值按钮 | 点击无响应 | 无弹窗/无逻辑 |
+| 提现按钮 | 点击无响应 | 无弹窗/无逻辑 |
+| QR码按钮 | 点击无响应 | 无弹窗/无逻辑 |
+| 余额计算逻辑 | `useUserBalance` 按完成订单聚合 | 逻辑正确但未接入 UI |
 
-- 首页 / 借贷页：显示的是已上浮 1% 的价格，而非纯市价
-- 买币页：基准价 × 0.99 ≈ 市价（买入折扣消失）
-- 卖币页：基准价 × 1.01 ≈ 市价 × 1.02（double 上浮）
+---
 
-后台修改 `buy_spread` / `sell_spread` 的值对前端**实际没有正确生效**。
-
-### 目标架构
+### 改进目标
 
 ```text
-纯基准价 = priceUsd × krwRate          （useCryptoData 输出）
-首页显示 = 纯基准价 × home_spread       （初始值 1.0）
-借贷页显示 = 纯基准价 × lending_spread  （初始值 1.0）
-买币页显示 = 纯基准价 × buy_spread      （初始值 0.99）
-卖币页显示 = 纯基准价 × sell_spread     （初始值 1.01）
+总资产价值 = Σ(持仓数量 × 当前市价)        ← 基于 useUserBalance + useCryptoData
+平台赠金   = profiles.bonus_krw              ← 管理员可在后台用户管理中设置
+充值弹窗   = 显示平台钱包地址 + QR码        ← 复用 SellFormPage 的 DEPOSIT_ADDRESSES
+提现弹窗   = 用户填写提现申请信息           ← 生成提现申请订单
+QR码弹窗   = 显示用户 UID 的收款二维码      ← 供其他用户转账时扫描
 ```
 
-所有 spread 值均来自后台 `platform_settings`，管理员可随时调整。
+---
+
+### 第一步：数据库 — 为 profiles 表新增 bonus_krw 字段
+
+通过数据库迁移，在 `profiles` 表中添加：
+- `bonus_krw numeric NOT NULL DEFAULT 0` — 平台赠金余额（单位：KRW），管理员可调整
 
 ---
 
-### 第一步：数据库 - 新增两个设置项
+### 第二步：修改 `src/pages/AssetsPage.tsx`
 
-在 `platform_settings` 表插入两条新记录：
+**2.1 接入真实余额计算**
+- 引入 `useUserBalance` 和 `useCryptoData`
+- 计算总资产价值：`Σ(coinBalances[coinId] × coins.find(coinId).priceKrw)`
+- `총 자산 잔액` 卡片显示真实计算值，加载中显示骨架屏
 
-| key | value | label | description |
-|-----|-------|-------|-------------|
-| `home_spread` | `1.0` | 首页价格系数 | 首页行情展示价格系数，1.0 表示显示纯市价 |
-| `lending_spread` | `1.0` | 借贷页价格系数 | 借贷页担保品估值系数，1.0 表示显示纯市价 |
+**2.2 接入真实平台赠金**
+- `useAuth` 中的 `profile` 已包含 profiles 表的所有字段
+- `플랫폼 보너스` 读取 `profile.bonus_krw`（新增字段），格式化为 KRW
 
----
+**2.3 持仓明细展示**
+- 在余额卡片下方，若有持仓则新增"코인 보유 현황" 区块
+- 每行显示：币种图标 + 名称 + 数量 + 折合 KRW 价值
 
-### 第二步：修改 `src/hooks/usePlatformSettings.ts`
+**2.4 充值弹窗（충전）**
+- 使用 Dialog 组件
+- 步骤一：选择区块链（ethereum/bsc/tron/solana/polygon）
+- 步骤二：显示对应充值地址 + 通过 `https://api.qrserver.com` 生成 QR 码图片
+- 复制地址按钮 + 警告提示（只充相同链的资产）
 
-- 在 `DEFAULTS` 中添加 `home_spread: "1.0"` 和 `lending_spread: "1.0"`
-- 在返回对象中添加 `homeSpread` 和 `lendingSpread` 两个字段
-- 更新 `PlatformSettings` interface
+**2.5 提现弹窗（출금）**
+- 使用 Dialog 组件
+- 填写：银行名称、账号、户名、提现金额
+- 提交后插入一条 `type: "withdraw"` 的待处理工单（复用 orders 表，status 默认 `대기`）
 
----
+**2.6 QR码弹窗（QR코드）**
+- 显示当前用户的 `uid_display` + 邮箱的二维码
+- 使用 `api.qrserver.com` 生成，方便其他用户扫码识别
 
-### 第三步：修改 `src/hooks/useCryptoData.ts`
-
-核心修复：将基准价从 `priceUsd × krwRate × sellSpread` 改为 `priceUsd × krwRate`（纯净基准价）。
-
-- `fetchCoins` 参数从 `(krwRate, priceMarkup)` 改为只接收 `krwRate`
-- 计算改为：`const priceKrw = priceUsd * krwRate`
-- `useCryptoData` 内部只取 `krwRate`，`queryKey` 只依赖 `krwRate`
-
----
-
-### 第四步：修改各展示页面，应用对应 spread
-
-**`src/pages/Index.tsx`（首页）**
-- 引入 `usePlatformSettings`，取 `homeSpread`
-- 展示价格改为：`coin.priceKrw * homeSpread`
-
-**`src/pages/LendingPage.tsx`（借贷列表页）**
-- 引入 `usePlatformSettings`，取 `lendingSpread`
-- 展示价格改为：`coin.priceKrw * lendingSpread`
-
-**`src/pages/BuyPage.tsx` / `src/pages/SellPage.tsx`**
-- 逻辑本身已正确（各自乘以 buySpread / sellSpread），修复基准价后自然正确，无需改动
+**2.7 전환 按钮**
+- 暂时显示"准备中"的 Toast，不做实际功能
 
 ---
 
-### 第五步：移除遗留常量
+### 第三步：修改 `src/pages/admin/AdminUsers.tsx`
 
-**`src/lib/cryptoData.ts`**
-- 删除 `export const PRICE_MARKUP = 1.01`
-- `mockCoins` 中的 `priceKrw` 改为 `priceUsd * KRW_RATE`（去掉 `PRICE_MARKUP` 因子），保证 fallback 数据与真实逻辑一致
+在用户管理表格中新增：
+- **赠金列**：显示当前 `bonus_krw` 值
+- **编辑赠金**：点击后弹出输入框，管理员可以设置该用户的赠金金额
+- 通过 `supabase.from("profiles").update({ bonus_krw })` 保存
 
 ---
 
-### 修复后各页面价格对比
+### 第四步：修改 `src/hooks/useAuth.ts` — Profile 类型更新
 
-| 页面 | 修复前 | 修复后 |
-|------|--------|--------|
-| 首页 | 市价 × 1.01（固定，不受后台控制） | 市价 × home_spread（后台可调，默认 1.0） |
-| 借贷页 | 市价 × 1.01（固定） | 市价 × lending_spread（默认 1.0） |
-| 买币页 | 市价 × 1.01 × 0.99 ≈ 市价 | 市价 × buy_spread（默认 0.99，正确打折） |
-| 卖币页 | 市价 × 1.01 × 1.01 ≈ 市价 × 1.02 | 市价 × sell_spread（默认 1.01，正确上浮） |
+在 `Profile` interface 中补充 `bonus_krw: number` 字段，确保类型安全。
+
+---
 
 ### 文件变更清单
 
-| 操作 | 文件 |
-|------|------|
-| 数据库 INSERT | platform_settings：新增 home_spread、lending_spread |
-| 修改 | `src/hooks/usePlatformSettings.ts` |
-| 修改 | `src/hooks/useCryptoData.ts` |
-| 修改 | `src/pages/Index.tsx` |
-| 修改 | `src/pages/LendingPage.tsx` |
-| 修改 | `src/lib/cryptoData.ts` |
+| 类型 | 文件 | 说明 |
+|------|------|------|
+| DB 迁移 | profiles 表 | 新增 `bonus_krw` 字段 |
+| 修改 | `src/hooks/useAuth.ts` | Profile 接口补充 `bonus_krw` |
+| 修改 | `src/pages/AssetsPage.tsx` | 接入真实余额、赠金、三个弹窗功能 |
+| 修改 | `src/pages/admin/AdminUsers.tsx` | 增加赠金显示与编辑功能 |
+
+---
+
+### QR 码生成方案说明
+
+项目未安装 qrcode 相关库，使用免费公共 API 生成：
+```
+https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=<内容>
+```
+不需要安装额外依赖，通过 `<img>` 标签直接渲染。
+
+---
+
+### 余额计算逻辑说明
+
+`useUserBalance` 现有逻辑正确——仅聚合 `status = '완료'` 的订单：
+- 买入：`coinBalance[coinId] += amount`
+- 卖出：`coinBalance[coinId] -= amount`
+
+总资产 KRW 折算：
+```typescript
+const totalKrw = Object.entries(coinBalances).reduce((sum, [coinId, qty]) => {
+  const coin = coins.find(c => c.id === coinId);
+  return sum + qty * (coin?.priceKrw ?? 0);
+}, 0);
+```
+
