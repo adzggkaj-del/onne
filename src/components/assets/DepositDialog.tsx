@@ -1,17 +1,9 @@
 import { useState } from "react";
-import { Copy, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Copy, AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
-import { chains } from "@/lib/cryptoData";
-
-const DEPOSIT_ADDRESSES: Record<string, string> = {
-  ethereum: "0x742d35Cc6634C0532925a3b8D4C9b3A1234567890",
-  bsc: "0x742d35Cc6634C0532925a3b8D4C9b3A1234567890",
-  tron: "TQn9Y2khEsLJW1ChVWFMSMeRDow5KcbLSE",
-  solana: "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
-  polygon: "0x742d35Cc6634C0532925a3b8D4C9b3A1234567890",
-};
+import { usePlatformSettings } from "@/hooks/usePlatformSettings";
 
 const CHAIN_LIST = [
   { id: "ethereum", label: "Ethereum (ERC-20)" },
@@ -29,8 +21,9 @@ interface DepositDialogProps {
 const DepositDialog = ({ open, onOpenChange }: DepositDialogProps) => {
   const [selectedChain, setSelectedChain] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const { addresses, isLoading } = usePlatformSettings();
 
-  const address = selectedChain ? DEPOSIT_ADDRESSES[selectedChain] : null;
+  const address = selectedChain ? (addresses[selectedChain] ?? "") : null;
 
   const handleCopy = () => {
     if (!address) return;
@@ -56,16 +49,22 @@ const DepositDialog = ({ open, onOpenChange }: DepositDialogProps) => {
         {!selectedChain ? (
           <div className="space-y-2 py-2">
             <p className="text-sm text-muted-foreground mb-3">네트워크를 선택하세요</p>
-            {CHAIN_LIST.map((chain) => (
-              <Button
-                key={chain.id}
-                variant="outline"
-                className="w-full justify-start border-border/50 hover:border-primary/40 hover:bg-primary/5"
-                onClick={() => setSelectedChain(chain.id)}
-              >
-                {chain.label}
-              </Button>
-            ))}
+            {isLoading ? (
+              <div className="flex justify-center py-6">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              CHAIN_LIST.map((chain) => (
+                <Button
+                  key={chain.id}
+                  variant="outline"
+                  className="w-full justify-start border-border/50 hover:border-primary/40 hover:bg-primary/5"
+                  onClick={() => setSelectedChain(chain.id)}
+                >
+                  {chain.label}
+                </Button>
+              ))
+            )}
           </div>
         ) : (
           <div className="space-y-4 py-2">
@@ -73,31 +72,39 @@ const DepositDialog = ({ open, onOpenChange }: DepositDialogProps) => {
               ← 네트워크 변경
             </Button>
 
-            <div className="flex justify-center">
-              <img
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(address!)}`}
-                alt="QR Code"
-                className="rounded-lg border border-border/50 p-1"
-                width={180}
-                height={180}
-              />
-            </div>
+            {!address ? (
+              <div className="rounded-lg bg-secondary p-4 text-center text-sm text-muted-foreground">
+                관리자가 아직 이 네트워크의 주소를 설정하지 않았습니다.
+              </div>
+            ) : (
+              <>
+                <div className="flex justify-center">
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(address)}`}
+                    alt="QR Code"
+                    className="rounded-lg border border-border/50 p-1"
+                    width={180}
+                    height={180}
+                  />
+                </div>
 
-            <div className="rounded-lg bg-secondary p-3 space-y-2">
-              <p className="text-xs text-muted-foreground">입금 주소</p>
-              <p className="font-mono text-xs break-all leading-relaxed">{address}</p>
-              <Button size="sm" variant="outline" className="w-full gap-2" onClick={handleCopy}>
-                {copied ? <CheckCircle2 className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
-                {copied ? "복사됨" : "주소 복사"}
-              </Button>
-            </div>
+                <div className="rounded-lg bg-secondary p-3 space-y-2">
+                  <p className="text-xs text-muted-foreground">입금 주소</p>
+                  <p className="font-mono text-xs break-all leading-relaxed">{address}</p>
+                  <Button size="sm" variant="outline" className="w-full gap-2" onClick={handleCopy}>
+                    {copied ? <CheckCircle2 className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
+                    {copied ? "복사됨" : "주소 복사"}
+                  </Button>
+                </div>
 
-            <div className="flex gap-2 rounded-lg bg-destructive/10 border border-destructive/20 p-3">
-              <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
-              <p className="text-xs text-destructive/80">
-                반드시 <strong>{CHAIN_LIST.find(c => c.id === selectedChain)?.label}</strong> 네트워크로만 입금하세요. 다른 네트워크로 입금 시 자산이 손실될 수 있습니다.
-              </p>
-            </div>
+                <div className="flex gap-2 rounded-lg bg-destructive/10 border border-destructive/20 p-3">
+                  <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+                  <p className="text-xs text-destructive/80">
+                    반드시 <strong>{CHAIN_LIST.find(c => c.id === selectedChain)?.label}</strong> 네트워크로만 입금하세요. 다른 네트워크로 입금 시 자산이 손실될 수 있습니다.
+                  </p>
+                </div>
+              </>
+            )}
           </div>
         )}
       </DialogContent>

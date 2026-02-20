@@ -18,6 +18,7 @@ interface PlatformSettings {
   lendingTermDays: number;
   krwRate: number;
   isLoading: boolean;
+  addresses: Record<string, string>;
 }
 
 const DEFAULTS: Record<string, string> = {
@@ -29,6 +30,11 @@ const DEFAULTS: Record<string, string> = {
   lending_daily_rate: "0.001",
   lending_term_days: "30",
   krw_rate: "1380",
+  addr_ethereum: "",
+  addr_bsc: "",
+  addr_tron: "",
+  addr_solana: "",
+  addr_polygon: "",
 };
 
 const fetchSettings = async (): Promise<Record<string, string>> => {
@@ -53,6 +59,14 @@ export const usePlatformSettings = (): PlatformSettings => {
 
   const get = (key: string) => parseFloat(data?.[key] ?? DEFAULTS[key]);
 
+  const addresses: Record<string, string> = {
+    ethereum: data?.["addr_ethereum"] ?? "",
+    bsc: data?.["addr_bsc"] ?? "",
+    tron: data?.["addr_tron"] ?? "",
+    solana: data?.["addr_solana"] ?? "",
+    polygon: data?.["addr_polygon"] ?? "",
+  };
+
   return {
     buySpread: get("buy_spread"),
     sellSpread: get("sell_spread"),
@@ -63,5 +77,6 @@ export const usePlatformSettings = (): PlatformSettings => {
     lendingTermDays: get("lending_term_days"),
     krwRate: get("krw_rate"),
     isLoading,
+    addresses,
   };
 };
