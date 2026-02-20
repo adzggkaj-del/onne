@@ -9,6 +9,7 @@ export interface Profile {
   avatar_url: string | null;
   uid_display: string | null;
   verified: boolean;
+  bonus_krw: number;
 }
 
 export const useAuth = () => {
