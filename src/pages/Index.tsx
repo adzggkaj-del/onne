@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatKRW, formatVolume, generateFakeTransactions } from "@/lib/cryptoData";
 import { useCryptoData } from "@/hooks/useCryptoData";
+import { usePlatformSettings } from "@/hooks/usePlatformSettings";
 import { useAuth } from "@/hooks/useAuth";
 import AnimatedPage from "@/components/AnimatedPage";
 import PriceFlash from "@/components/PriceFlash";
@@ -25,6 +26,7 @@ const portfolio = [
 
 const Index = () => {
   const { data: coins = [], isLoading } = useCryptoData();
+  const { homeSpread } = usePlatformSettings();
   const { user } = useAuth();
 
   const fakeTransactions = useMemo(() => generateFakeTransactions(30), []);
@@ -183,8 +185,8 @@ const Index = () => {
                           })}
                         </div>
                         <div className="text-right">
-                          <PriceFlash value={coin.priceKrw}>
-                            <span className="font-semibold text-sm">{formatKRW(coin.priceKrw)}</span>
+                          <PriceFlash value={coin.priceKrw * homeSpread}>
+                            <span className="font-semibold text-sm">{formatKRW(coin.priceKrw * homeSpread)}</span>
                           </PriceFlash>
                           <p className="text-xs text-muted-foreground">{formatVolume(coin.volume24h)}</p>
                         </div>

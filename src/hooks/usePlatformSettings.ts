@@ -11,6 +11,8 @@ interface PlatformSetting {
 interface PlatformSettings {
   buySpread: number;
   sellSpread: number;
+  homeSpread: number;
+  lendingSpread: number;
   tradeFeeRate: number;
   lendingDailyRate: number;
   lendingTermDays: number;
@@ -21,6 +23,8 @@ interface PlatformSettings {
 const DEFAULTS: Record<string, string> = {
   buy_spread: "0.99",
   sell_spread: "1.01",
+  home_spread: "1.0",
+  lending_spread: "1.0",
   trade_fee_rate: "0.001",
   lending_daily_rate: "0.001",
   lending_term_days: "30",
@@ -52,6 +56,8 @@ export const usePlatformSettings = (): PlatformSettings => {
   return {
     buySpread: get("buy_spread"),
     sellSpread: get("sell_spread"),
+    homeSpread: get("home_spread"),
+    lendingSpread: get("lending_spread"),
     tradeFeeRate: get("trade_fee_rate"),
     lendingDailyRate: get("lending_daily_rate"),
     lendingTermDays: get("lending_term_days"),
