@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Save, Info, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Save, Info, AlertTriangle, CheckCircle2, Wallet } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -19,7 +19,9 @@ interface Setting {
   updated_at: string;
 }
 
-// Per-field metadata: range, step, unit, category
+// Address keys (text type, not numeric)
+const ADDRESS_KEYS = new Set(["addr_ethereum", "addr_bsc", "addr_tron", "addr_solana", "addr_polygon"]);
+
 const FIELD_META: Record<string, {
   min: number;
   max: number;
@@ -90,6 +92,73 @@ function getRangeStatus(key: string, value: string): "ok" | "warn" | "error" {
   return "ok";
 }
 
+// ── Address setting card (text, not numeric) ──────────────────────────────────
+const AddressCard = ({
+  s,
+  currentVal,
+  onChange,
+  onSave,
+  isPending,
+}: {
+  s: Setting;
+  currentVal: string;
+  onChange: (v: string) => void;
+  onSave: () => void;
+  isPending: boolean;
+}) => {
+  const isDirty = currentVal !== s.value;
+  return (
+    <Card className={cn("bg-card border-border/50 transition-colors", isDirty && "border-primary/40 bg-primary/5")}>
+      <CardContent className="p-4 space-y-3">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Wallet className="h-3.5 w-3.5 text-muted-foreground" />
+              <Label className="font-semibold text-sm">{s.label}</Label>
+              <Badge variant="secondary" className="text-xs font-mono px-1.5 py-0">{s.key}</Badge>
+              {isDirty && <Badge variant="outline" className="text-xs text-primary border-primary/50">미저장</Badge>}
+            </div>
+            {s.description && (
+              <p className="text-xs text-muted-foreground mt-1 flex items-start gap-1">
+                <Info className="h-3 w-3 mt-0.5 shrink-0 text-muted-foreground/70" />
+                {s.description}
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="flex gap-2 items-center">
+          <Input
+            type="text"
+            value={currentVal}
+            placeholder="지갑 주소를 입력하세요"
+            onChange={(e) => onChange(e.target.value)}
+            className="bg-secondary border-border/50 font-mono text-xs"
+          />
+          <Button size="sm" onClick={onSave} disabled={!isDirty || isPending} className="gap-1.5 shrink-0">
+            <Save className="h-3.5 w-3.5" /> 저장
+          </Button>
+        </div>
+
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5">
+            {currentVal && (
+              <span className="flex items-center gap-1 text-xs text-primary">
+                <CheckCircle2 className="h-3 w-3" />
+                {currentVal.length > 20 ? currentVal.slice(0, 10) + "…" + currentVal.slice(-8) : currentVal}
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground shrink-0">
+            마지막 수정: {new Date(s.updated_at).toLocaleString("ko-KR")}
+          </p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+// ── Main component ────────────────────────────────────────────────────────────
 const AdminSettings = () => {
   const qc = useQueryClient();
   const [values, setValues] = useState<Record<string, string>>({});
@@ -127,13 +196,17 @@ const AdminSettings = () => {
     onError: (e: Error) => toast({ title: "오류", description: e.message, variant: "destructive" }),
   });
 
-  // Group settings by category
+  // Numeric settings grouped by category
   const grouped = CATEGORY_ORDER.reduce<Record<string, Setting[]>>((acc, cat) => {
     acc[cat] = settings.filter((s) => FIELD_META[s.key]?.category === cat);
     return acc;
   }, {});
-  // Ungrouped fallback
-  const ungrouped = settings.filter((s) => !FIELD_META[s.key]);
+
+  // Address settings
+  const addressSettings = settings.filter((s) => ADDRESS_KEYS.has(s.key));
+
+  // Completely unknown settings
+  const ungrouped = settings.filter((s) => !FIELD_META[s.key] && !ADDRESS_KEYS.has(s.key));
 
   return (
     <div className="p-4 md:p-6 max-w-3xl mx-auto space-y-8">
@@ -146,6 +219,7 @@ const AdminSettings = () => {
         <p className="text-muted-foreground">로딩 중...</p>
       ) : (
         <div className="space-y-8">
+          {/* Numeric categories */}
           {CATEGORY_ORDER.map((category) => {
             const items = grouped[category];
             if (!items?.length) return null;
@@ -170,7 +244,6 @@ const AdminSettings = () => {
                         isDirty && "border-primary/40 bg-primary/5"
                       )}>
                         <CardContent className="p-4 space-y-3">
-                          {/* Header row */}
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
@@ -189,7 +262,6 @@ const AdminSettings = () => {
                             </div>
                           </div>
 
-                          {/* Range hint */}
                           {meta && (
                             <div className="flex items-center gap-3 text-xs">
                               <span className="text-muted-foreground">권장 범위:</span>
@@ -201,7 +273,6 @@ const AdminSettings = () => {
                             </div>
                           )}
 
-                          {/* Input row */}
                           <div className="flex gap-2 items-center">
                             <div className="relative flex-1">
                               <Input
@@ -211,7 +282,7 @@ const AdminSettings = () => {
                                 max={meta?.max}
                                 step={meta?.step}
                                 onChange={(e) => setValues({ ...values, [s.key]: e.target.value })}
-                              className={cn(
+                                className={cn(
                                   "bg-secondary border-border/50 font-mono",
                                   status === "warn" && "border-warning/60 focus-visible:ring-warning/30",
                                   status === "error" && "border-destructive/60 focus-visible:ring-destructive/30"
@@ -228,7 +299,6 @@ const AdminSettings = () => {
                             </Button>
                           </div>
 
-                          {/* Status feedback row */}
                           <div className="flex items-center justify-between gap-2">
                             <div className="flex items-center gap-1.5">
                               {status === "warn" && (
@@ -257,7 +327,29 @@ const AdminSettings = () => {
             );
           })}
 
-          {/* Ungrouped fallback */}
+          {/* Wallet addresses */}
+          {addressSettings.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">입금 지갑 주소</h2>
+                <div className="flex-1 h-px bg-border/60" />
+              </div>
+              <div className="space-y-3">
+                {addressSettings.map((s) => (
+                  <AddressCard
+                    key={s.key}
+                    s={s}
+                    currentVal={values[s.key] ?? s.value}
+                    onChange={(v) => setValues({ ...values, [s.key]: v })}
+                    onSave={() => saveSetting.mutate({ key: s.key, value: values[s.key] ?? s.value })}
+                    isPending={saveSetting.isPending}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Unknown / ungrouped fallback */}
           {ungrouped.length > 0 && (
             <div className="space-y-3">
               {ungrouped.map((s) => (

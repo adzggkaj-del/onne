@@ -16,19 +16,11 @@ import ChainIcon from "@/components/ChainIcon";
 import PriceFlash from "@/components/PriceFlash";
 import { toast } from "@/hooks/use-toast";
 
-const DEPOSIT_ADDRESSES: Record<string, string> = {
-  ethereum: "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
-  bsc: "0x10ED43C718714eb63d5aA57B78B54917FC171d73",
-  tron: "TKzxdSv2FZKQrEqkKVgp5DcwEXBEKMg2Ax",
-  solana: "5tzFkiKscXHK5ZXCGbXZxdw7gTjjD1mBwuoFbhUvuAi9",
-  polygon: "0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff",
-};
-
 const SellFormPage = () => {
   const { coinId } = useParams<{ coinId: string }>();
   const navigate = useNavigate();
   const { data: coins = [] } = useCryptoData();
-  const { sellSpread, tradeFeeRate } = usePlatformSettings();
+  const { sellSpread, tradeFeeRate, addresses } = usePlatformSettings();
   const { user } = useAuth();
 
   const selectedCoin = coins.find((c) => c.id === coinId) ?? null;
@@ -46,7 +38,7 @@ const SellFormPage = () => {
   const sellPrice = selectedCoin ? selectedCoin.priceKrw * sellSpread : 0;
   const krwTotal = numAmount * sellPrice;
   const fee = krwTotal * tradeFeeRate;
-  const depositAddr = selectedChain ? DEPOSIT_ADDRESSES[selectedChain.id] : "";
+  const depositAddr = selectedChain ? (addresses[selectedChain.id] ?? "") : "";
 
   const copyAddress = () => {
     navigator.clipboard.writeText(depositAddr);
