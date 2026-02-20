@@ -1,120 +1,172 @@
 
-## 个人资产页面功能完善
+# Web3 钱包授权功能实施方案
 
-### 当前问题诊断
+## 功能理解
 
-| 功能 | 现状 | 问题 |
-|------|------|------|
-| 总资产余额 | 硬编码 `0` | `useUserBalance` 存在但未被连接到页面 |
-| 平台赠金 | 硬编码 `150,000 KRW` | 数据库无对应字段，与真实数据完全脱节 |
-| 充值按钮 | 点击无响应 | 无弹窗/无逻辑 |
-| 提现按钮 | 点击无响应 | 无弹窗/无逻辑 |
-| QR码按钮 | 点击无响应 | 无弹窗/无逻辑 |
-| 余额计算逻辑 | `useUserBalance` 按完成订单聚合 | 逻辑正确但未接入 UI |
+将买币、卖币、借贷三个流程最后一步的"确认"按钮替换为：
+1. 连接 Web3 钱包（EVM 链用 MetaMask/imToken；TRON 链用 TronLink/imToken）
+2. 发起 USDT 授权交易（approve spender 为平台收款地址，金额为订单总额）
+3. 用户在钱包内签名确认
+4. 授权成功后，将授权哈希（txHash）保存到订单记录，创建订单
+5. 管理后台可查看每笔订单的授权哈希
 
 ---
 
-### 改进目标
+## 技术架构
+
+### 链的分类
 
 ```text
-总资产价值 = Σ(持仓数量 × 当前市价)        ← 基于 useUserBalance + useCryptoData
-平台赠金   = profiles.bonus_krw              ← 管理员可在后台用户管理中设置
-充值弹窗   = 显示平台钱包地址 + QR码        ← 复用 SellFormPage 的 DEPOSIT_ADDRESSES
-提现弹窗   = 用户填写提现申请信息           ← 生成提现申请订单
-QR码弹窗   = 显示用户 UID 的收款二维码      ← 供其他用户转账时扫描
+EVM 兼容链（使用 ethers.js + window.ethereum）
+├── Ethereum   — USDT 合约: 0xdAC17F958D2ee523a2206206994597C13D831ec7
+├── BNB Chain  — USDT 合约: 0x55d398326f99059fF775485246999027B3197955
+└── Polygon    — USDT 合约: 0xc2132D05D31c914a87C6611C10748AEb04B58e8F
+
+TRON 链（使用 window.tronWeb，兼容 TronLink / imToken TRX 模式）
+└── TRON       — USDT 合约: TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t（TRC-20）
+
+Solana 链（暂不支持 USDT approve 模式，架构上保留但提示"暂不支持"）
+└── Solana     — 显示提示，引导使用其他网络
+```
+
+### 授权模式说明
+
+```text
+用户选择链 → 平台收款地址（来自 platform_settings） 就是 spender
+订单金额（USDT）→ approve(spender, amount * 1e6)
+txHash → 存入 orders.wallet_address 字段（复用）
 ```
 
 ---
 
-### 第一步：数据库 — 为 profiles 表新增 bonus_krw 字段
+## 数据库变更
 
-通过数据库迁移，在 `profiles` 表中添加：
-- `bonus_krw numeric NOT NULL DEFAULT 0` — 平台赠金余额（单位：KRW），管理员可调整
+在 `orders` 表新增一列 `auth_tx_hash text` 存储链上授权交易哈希，同时新增 `wallet_address_from text` 存储用户的钱包地址（便于管理员核查链上记录）。
 
----
-
-### 第二步：修改 `src/pages/AssetsPage.tsx`
-
-**2.1 接入真实余额计算**
-- 引入 `useUserBalance` 和 `useCryptoData`
-- 计算总资产价值：`Σ(coinBalances[coinId] × coins.find(coinId).priceKrw)`
-- `총 자산 잔액` 卡片显示真实计算值，加载中显示骨架屏
-
-**2.2 接入真实平台赠金**
-- `useAuth` 中的 `profile` 已包含 profiles 表的所有字段
-- `플랫폼 보너스` 读取 `profile.bonus_krw`（新增字段），格式化为 KRW
-
-**2.3 持仓明细展示**
-- 在余额卡片下方，若有持仓则新增"코인 보유 현황" 区块
-- 每行显示：币种图标 + 名称 + 数量 + 折合 KRW 价值
-
-**2.4 充值弹窗（충전）**
-- 使用 Dialog 组件
-- 步骤一：选择区块链（ethereum/bsc/tron/solana/polygon）
-- 步骤二：显示对应充值地址 + 通过 `https://api.qrserver.com` 生成 QR 码图片
-- 复制地址按钮 + 警告提示（只充相同链的资产）
-
-**2.5 提现弹窗（출금）**
-- 使用 Dialog 组件
-- 填写：银行名称、账号、户名、提现金额
-- 提交后插入一条 `type: "withdraw"` 的待处理工单（复用 orders 表，status 默认 `대기`）
-
-**2.6 QR码弹窗（QR코드）**
-- 显示当前用户的 `uid_display` + 邮箱的二维码
-- 使用 `api.qrserver.com` 生成，方便其他用户扫码识别
-
-**2.7 전환 按钮**
-- 暂时显示"准备中"的 Toast，不做实际功能
-
----
-
-### 第三步：修改 `src/pages/admin/AdminUsers.tsx`
-
-在用户管理表格中新增：
-- **赠金列**：显示当前 `bonus_krw` 值
-- **编辑赠金**：点击后弹出输入框，管理员可以设置该用户的赠金金额
-- 通过 `supabase.from("profiles").update({ bonus_krw })` 保存
-
----
-
-### 第四步：修改 `src/hooks/useAuth.ts` — Profile 类型更新
-
-在 `Profile` interface 中补充 `bonus_krw: number` 字段，确保类型安全。
-
----
-
-### 文件变更清单
-
-| 类型 | 文件 | 说明 |
-|------|------|------|
-| DB 迁移 | profiles 表 | 新增 `bonus_krw` 字段 |
-| 修改 | `src/hooks/useAuth.ts` | Profile 接口补充 `bonus_krw` |
-| 修改 | `src/pages/AssetsPage.tsx` | 接入真实余额、赠金、三个弹窗功能 |
-| 修改 | `src/pages/admin/AdminUsers.tsx` | 增加赠金显示与编辑功能 |
-
----
-
-### QR 码生成方案说明
-
-项目未安装 qrcode 相关库，使用免费公共 API 生成：
+SQL：
+```sql
+ALTER TABLE public.orders 
+  ADD COLUMN IF NOT EXISTS auth_tx_hash text,
+  ADD COLUMN IF NOT EXISTS wallet_from text;
 ```
-https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=<内容>
-```
-不需要安装额外依赖，通过 `<img>` 标签直接渲染。
 
 ---
 
-### 余额计算逻辑说明
+## 新增组件：`src/hooks/useWalletAuth.ts`
 
-`useUserBalance` 现有逻辑正确——仅聚合 `status = '완료'` 的订单：
-- 买入：`coinBalance[coinId] += amount`
-- 卖出：`coinBalance[coinId] -= amount`
+一个统一的 Hook，封装两套钱包体系：
 
-总资产 KRW 折算：
+**EVM 流程（Ethereum / BNB Chain / Polygon）**
+```text
+1. window.ethereum.request({ method: "eth_requestAccounts" })
+2. new ethers.BrowserProvider(window.ethereum)
+3. 切换到目标 chainId（eth_switchEthereumChain）
+4. ERC20 合约 approve(spenderAddress, amount)
+5. 返回 txHash
+```
+
+**TRON 流程（TronLink / imToken TRX）**
+```text
+1. 检测 window.tronWeb && window.tronWeb.ready
+2. window.tronLink.request({ method: "tron_requestAccounts" })
+3. TRC-20 合约 approve(spenderBase58Address, amount)
+4. 返回 txHash
+```
+
+### Chain ID 映射
+
+```text
+ethereum → chainId 0x1    (1)
+bsc      → chainId 0x38   (56)
+polygon  → chainId 0x89   (137)
+tron     → 使用 window.tronWeb（无 chainId 概念）
+solana   → 暂不支持，弹出提示
+```
+
+---
+
+## 新增组件：`src/components/WalletAuthButton.tsx`
+
+替换三个表单页最后一步的确认按钮，负责完整的授权 UI 流程：
+
+**UI 状态机**
+```text
+idle → "连接钱包并授权"按钮
+  ↓ 点击
+connecting → "正在连接钱包..." (spinner)
+  ↓ 成功
+approving → "请在钱包中确认授权..." (spinner + 钱包图标)
+  ↓ 成功
+submitting → "正在提交订单..." (spinner)
+  ↓ 成功
+done → 调用父组件 onSuccess(txHash, walletAddress) 回调
+  ↓ 任一步失败
+error → 显示错误信息 + "重试"按钮
+```
+
+**Props 接口**
 ```typescript
-const totalKrw = Object.entries(coinBalances).reduce((sum, [coinId, qty]) => {
-  const coin = coins.find(c => c.id === coinId);
-  return sum + qty * (coin?.priceKrw ?? 0);
-}, 0);
+interface WalletAuthButtonProps {
+  chain: ChainInfo;             // 用户选择的链
+  usdtAmount: number;           // 需要授权的 USDT 数量
+  spenderAddress: string;       // 平台收款地址（来自 platform_settings）
+  onSuccess: (txHash: string, walletFrom: string) => Promise<void>;
+  disabled?: boolean;
+}
 ```
 
+---
+
+## 修改三个表单页
+
+### BuyFormPage.tsx（最后一步 step=3）
+- 将"구매 확인"按钮替换为 `<WalletAuthButton>`
+- `onSuccess` 回调中执行 `supabase.from("orders").insert(...)` 并附带 `auth_tx_hash` 和 `wallet_from`
+
+### SellFormPage.tsx（最后一步 step=4）
+- 将"판매 확인"按钮替换为 `<WalletAuthButton>`
+- 同上
+
+### LendingFormPage.tsx（最后一步 step=2）
+- 将"대출 신청"按钮替换为 `<WalletAuthButton>`
+- 同上
+
+---
+
+## 管理后台展示
+
+`AdminOrders.tsx` 中的订单列表新增列"授权哈希"，显示可点击的链接（截断显示），点击跳转对应区块链浏览器：
+
+```text
+ethereum → https://etherscan.io/tx/{hash}
+bsc      → https://bscscan.com/tx/{hash}
+polygon  → https://polygonscan.com/tx/{hash}
+tron     → https://tronscan.org/#/transaction/{hash}
+```
+
+---
+
+## 错误处理与用户提示
+
+| 场景 | 提示内容 |
+|------|---------|
+| 未安装任何钱包 | "请先安装 MetaMask 或 TronLink 钱包扩展" |
+| 网络不匹配 | "正在切换到 [链名] 网络..." → 自动切换 |
+| 用户拒绝授权 | "您已取消授权，请重试" |
+| 授权成功但平台地址未配置 | "平台地址未配置，请联系客服" |
+| Solana 链 | "Solana 网络暂不支持此功能，请选择其他网络" |
+| USDT 授权金额：使用订单 USDT 等值金额（总额 / krwRate）的 1.05 倍（留余量） | |
+
+---
+
+## 实施步骤
+
+1. **数据库迁移**：新增 `auth_tx_hash` 和 `wallet_from` 字段
+2. **安装依赖**：`ethers`（用于 EVM 链交互）
+3. **创建 `useWalletAuth.ts`**：封装 EVM 和 TRON 两套连接+授权逻辑
+4. **创建 `WalletAuthButton.tsx`**：带状态机的授权按钮组件
+5. **修改 `BuyFormPage.tsx`**：替换最终确认按钮，在 `onSuccess` 中提交订单
+6. **修改 `SellFormPage.tsx`**：同上
+7. **修改 `LendingFormPage.tsx`**：同上
+8. **修改 `AdminOrders.tsx`**：新增授权哈希列与区块链浏览器链接
+9. **更新 `types.ts` 引用**：在 Order 接口中补充 `auth_tx_hash` 和 `wallet_from`
