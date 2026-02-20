@@ -14,13 +14,14 @@ import AnimatedPage from "@/components/AnimatedPage";
 import CoinIcon from "@/components/CoinIcon";
 import ChainIcon from "@/components/ChainIcon";
 import PriceFlash from "@/components/PriceFlash";
+import WalletAuthButton from "@/components/WalletAuthButton";
 import { toast } from "@/hooks/use-toast";
 
 const BuyFormPage = () => {
   const { coinId } = useParams<{ coinId: string }>();
   const navigate = useNavigate();
   const { data: coins = [] } = useCryptoData();
-  const { buySpread, tradeFeeRate } = usePlatformSettings();
+  const { buySpread, tradeFeeRate, krwRate, addresses } = usePlatformSettings();
   const { user } = useAuth();
 
   const selectedCoin = coins.find((c) => c.id === coinId) ?? null;
@@ -29,17 +30,19 @@ const BuyFormPage = () => {
   const [selectedChain, setSelectedChain] = useState<ChainInfo | null>(null);
   const [amount, setAmount] = useState("");
   const [walletAddress, setWalletAddress] = useState("");
-  const [submitting, setSubmitting] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
 
   const numAmount = parseFloat(amount) || 0;
   const buyPrice = selectedCoin ? selectedCoin.priceKrw * buySpread : 0;
   const krwTotal = numAmount * buyPrice;
   const fee = krwTotal * tradeFeeRate;
+  const totalKrw = krwTotal + fee;
+  // USDT amount for approve (total KRW / exchange rate)
+  const usdtAmount = krwRate > 0 ? totalKrw / krwRate : 0;
+  const spenderAddress = selectedChain ? (addresses[selectedChain.id] ?? "") : "";
 
-  const handleConfirm = async () => {
+  const handleWalletSuccess = async (txHash: string, walletFrom: string) => {
     if (!user || !selectedCoin || !selectedChain) return;
-    setSubmitting(true);
     const { error } = await supabase.from("orders").insert({
       user_id: user.id,
       type: "buy",
@@ -47,19 +50,22 @@ const BuyFormPage = () => {
       coin_symbol: selectedCoin.symbol,
       amount: numAmount,
       price_krw: buyPrice,
-      total_krw: krwTotal + fee,
+      total_krw: totalKrw,
       fee_krw: fee,
       status: "대기",
       chain: selectedChain.id,
       wallet_address: walletAddress,
-    });
-    setSubmitting(false);
+      auth_tx_hash: txHash,
+      wallet_from: walletFrom,
+    } as any);
     if (error) {
-      toast({ title: "주문 실패", description: error.message, variant: "destructive" });
-      return;
+      throw new Error(error.message);
     }
     setConfirmed(true);
-    toast({ title: "구매 주문이 접수되었습니다", description: `${selectedCoin.symbol} ${amount}개 · ${formatKRW(krwTotal + fee)}` });
+    toast({
+      title: "구매 주문이 접수되었습니다",
+      description: `${selectedCoin.symbol} ${amount}개 · ${formatKRW(totalKrw)}`,
+    });
   };
 
   const canNext = () => {
@@ -92,7 +98,10 @@ const BuyFormPage = () => {
           <CardContent className="p-4 flex items-center gap-3">
             <CoinIcon image={selectedCoin.image} icon={selectedCoin.icon} symbol={selectedCoin.symbol} />
             <div className="flex-1">
-              <p className="font-bold text-lg">{selectedCoin.symbol} <span className="text-muted-foreground text-sm font-normal">{selectedCoin.nameKr}</span></p>
+              <p className="font-bold text-lg">
+                {selectedCoin.symbol}{" "}
+                <span className="text-muted-foreground text-sm font-normal">{selectedCoin.nameKr}</span>
+              </p>
               <PriceFlash value={buyPrice}>
                 <span className="text-sm font-semibold">{formatKRW(buyPrice)}</span>
               </PriceFlash>
@@ -124,8 +133,15 @@ const BuyFormPage = () => {
                   <p className="text-sm text-muted-foreground">네트워크를 선택하세요</p>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {chains.map((chain) => (
-                      <Card key={chain.id} onClick={() => setSelectedChain(chain)}
-                        className={`cursor-pointer transition-all hover:border-primary/40 ${selectedChain?.id === chain.id ? "border-primary bg-primary/5" : "bg-card border-border/50"}`}>
+                      <Card
+                        key={chain.id}
+                        onClick={() => setSelectedChain(chain)}
+                        className={`cursor-pointer transition-all hover:border-primary/40 ${
+                          selectedChain?.id === chain.id
+                            ? "border-primary bg-primary/5"
+                            : "bg-card border-border/50"
+                        }`}
+                      >
                         <CardContent className="p-3 flex items-center gap-2">
                           <ChainIcon image={chain.image} icon={chain.icon} name={chain.name} />
                           <span className="font-medium text-xs">{chain.name}</span>
@@ -140,14 +156,36 @@ const BuyFormPage = () => {
                 <div className="space-y-3">
                   <div>
                     <Label className="text-muted-foreground">구매 수량 ({selectedCoin.symbol})</Label>
-                    <Input type="number" placeholder="0.00" value={amount} onChange={(e) => setAmount(e.target.value)} className="mt-1.5 bg-secondary border-border/50 text-lg" min="0" step="any" />
+                    <Input
+                      type="number"
+                      placeholder="0.00"
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                      className="mt-1.5 bg-secondary border-border/50 text-lg"
+                      min="0"
+                      step="any"
+                    />
                   </div>
                   <div className="p-3 rounded-xl bg-secondary/50 space-y-2 text-sm">
-                    <div className="flex justify-between"><span className="text-muted-foreground">단가</span><span>{formatKRW(buyPrice)}</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">소계</span><span>{formatKRW(krwTotal)}</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">수수료 (0.1%)</span><span>{formatKRW(fee)}</span></div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">단가</span>
+                      <span>{formatKRW(buyPrice)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">소계</span>
+                      <span>{formatKRW(krwTotal)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">수수료 (0.1%)</span>
+                      <span>{formatKRW(fee)}</span>
+                    </div>
                     <div className="border-t border-border/50 pt-2 flex justify-between font-bold">
-                      <span>총 결제</span><span className="text-primary">{formatKRW(krwTotal + fee)}</span>
+                      <span>총 결제</span>
+                      <span className="text-primary">{formatKRW(totalKrw)}</span>
+                    </div>
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>USDT 수권 금액 (예상)</span>
+                      <span>≈ {usdtAmount.toFixed(2)} USDT</span>
                     </div>
                   </div>
                 </div>
@@ -155,9 +193,19 @@ const BuyFormPage = () => {
 
               {step === 2 && (
                 <div className="space-y-3">
-                  <Label className="text-muted-foreground flex items-center gap-1.5"><Wallet className="h-4 w-4" /> 수신 지갑 주소</Label>
-                  <Input placeholder="0x..." value={walletAddress} onChange={(e) => setWalletAddress(e.target.value)} className="bg-secondary border-border/50 font-mono text-sm" maxLength={100} />
-                  <p className="text-xs text-muted-foreground">{selectedChain?.name} 네트워크 주소를 입력하세요</p>
+                  <Label className="text-muted-foreground flex items-center gap-1.5">
+                    <Wallet className="h-4 w-4" /> 수신 지갑 주소
+                  </Label>
+                  <Input
+                    placeholder="0x..."
+                    value={walletAddress}
+                    onChange={(e) => setWalletAddress(e.target.value)}
+                    className="bg-secondary border-border/50 font-mono text-sm"
+                    maxLength={100}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {selectedChain?.name} 네트워크 주소를 입력하세요
+                  </p>
                 </div>
               )}
 
@@ -170,32 +218,56 @@ const BuyFormPage = () => {
                     ["단가", formatKRW(buyPrice)],
                     ["소계", formatKRW(krwTotal)],
                     ["수수료", formatKRW(fee)],
-                    ["총 결제", formatKRW(krwTotal + fee)],
+                    ["총 결제", formatKRW(totalKrw)],
                   ].map(([label, value]) => (
                     <div key={label} className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">{label}</span><span>{value}</span>
+                      <span className="text-muted-foreground">{label}</span>
+                      <span>{value}</span>
                     </div>
                   ))}
                   <div className="mt-2">
                     <p className="text-xs text-muted-foreground mb-1">수신 주소</p>
-                    <p className="text-xs font-mono bg-secondary/50 p-2 rounded break-all">{walletAddress}</p>
+                    <p className="text-xs font-mono bg-secondary/50 p-2 rounded break-all">
+                      {walletAddress}
+                    </p>
+                  </div>
+
+                  {/* Wallet auth info box */}
+                  <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 space-y-1">
+                    <p className="text-xs font-medium text-primary">钱包授权说明</p>
+                    <p className="text-xs text-muted-foreground">
+                      点击下方按钮后，将在您的 {selectedChain?.name} 钱包中发起 USDT 授权请求。
+                      授权金额约 {usdtAmount.toFixed(2)} USDT（含 5% 余量）。
+                    </p>
                   </div>
                 </div>
               )}
 
               <div className="flex gap-3 pt-2">
-                <Button variant="outline" className="border-border/50" onClick={step === 0 ? () => navigate("/buy") : () => setStep(step - 1)}>
+                <Button
+                  variant="outline"
+                  className="border-border/50"
+                  onClick={step === 0 ? () => navigate("/buy") : () => setStep(step - 1)}
+                >
                   {step === 0 ? "취소" : "이전"}
                 </Button>
                 <div className="flex-1" />
                 {step < 3 ? (
-                  <Button className="bg-emerald-500 hover:bg-emerald-600 text-white px-8" disabled={!canNext()} onClick={() => setStep(step + 1)}>
+                  <Button
+                    className="bg-emerald-500 hover:bg-emerald-600 text-white px-8"
+                    disabled={!canNext()}
+                    onClick={() => setStep(step + 1)}
+                  >
                     다음
                   </Button>
                 ) : (
-                  <Button className="bg-emerald-500 hover:bg-emerald-600 text-white px-8" onClick={handleConfirm} disabled={submitting}>
-                    <Check className="h-4 w-4 mr-1" /> 구매 확인
-                  </Button>
+                  <WalletAuthButton
+                    chain={selectedChain!}
+                    usdtAmount={usdtAmount}
+                    spenderAddress={spenderAddress}
+                    onSuccess={handleWalletSuccess}
+                    className="bg-emerald-500 hover:bg-emerald-600 text-white px-8"
+                  />
                 )}
               </div>
             </CardContent>
@@ -209,8 +281,12 @@ const BuyFormPage = () => {
               <Check className="h-8 w-8 text-emerald-500" />
             </div>
             <p className="font-semibold">구매 주문이 접수되었습니다!</p>
-            <p className="text-sm text-muted-foreground">{selectedCoin.symbol} {amount}개 · {formatKRW(krwTotal + fee)}</p>
-            <Button variant="outline" className="border-border/50" onClick={() => navigate("/buy")}>코인 목록으로</Button>
+            <p className="text-sm text-muted-foreground">
+              {selectedCoin.symbol} {amount}개 · {formatKRW(totalKrw)}
+            </p>
+            <Button variant="outline" className="border-border/50" onClick={() => navigate("/buy")}>
+              코인 목록으로
+            </Button>
           </div>
         )}
       </div>

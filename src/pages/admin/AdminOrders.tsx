@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatKRW } from "@/lib/cryptoData";
 import { toast } from "@/hooks/use-toast";
-import { CheckCircle, XCircle, Building2, User, CreditCard, Banknote } from "lucide-react";
+import { CheckCircle, XCircle, Building2, User, CreditCard, Banknote, ExternalLink } from "lucide-react";
 
 const STATUS_OPTIONS = ["대기", "처리 중", "완료", "취소"];
 const TYPE_MAP: Record<string, string> = { buy: "구매", sell: "판매", lending: "대출", withdraw: "출금" };
@@ -18,6 +18,18 @@ const statusVariant = (s: string) => {
   if (s === "완료") return "default" as const;
   if (s === "취소") return "destructive" as const;
   return "secondary" as const;
+};
+
+// Build blockchain explorer URL for a tx hash
+const explorerUrl = (chain: string | null, hash: string): string => {
+  if (!chain || !hash) return "";
+  const map: Record<string, string> = {
+    ethereum: `https://etherscan.io/tx/${hash}`,
+    bsc: `https://bscscan.com/tx/${hash}`,
+    polygon: `https://polygonscan.com/tx/${hash}`,
+    tron: `https://tronscan.org/#/transaction/${hash}`,
+  };
+  return map[chain] ?? "";
 };
 
 interface Order {
@@ -29,10 +41,33 @@ interface Order {
   total_krw: number;
   status: string;
   created_at: string;
+  chain: string | null;
   bank_name: string | null;
   account_number: string | null;
   account_holder: string | null;
+  auth_tx_hash: string | null;
+  wallet_from: string | null;
 }
+
+const TxHashCell = ({ chain, hash }: { chain: string | null; hash: string | null }) => {
+  if (!hash) return <span className="text-muted-foreground text-xs">-</span>;
+  const url = explorerUrl(chain ?? "", hash);
+  const short = `${hash.slice(0, 8)}...${hash.slice(-6)}`;
+  if (url) {
+    return (
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center gap-1 text-xs text-primary hover:underline font-mono"
+      >
+        {short}
+        <ExternalLink className="h-3 w-3" />
+      </a>
+    );
+  }
+  return <span className="text-xs font-mono text-muted-foreground">{short}</span>;
+};
 
 const AdminOrders = () => {
   const qc = useQueryClient();
@@ -53,7 +88,6 @@ const AdminOrders = () => {
 
   const withdrawOrders = orders.filter((o) => o.type === "withdraw");
   const pendingWithdraws = withdrawOrders.filter((o) => o.status === "대기");
-  const otherOrders = orders.filter((o) => o.type !== "withdraw");
 
   const updateStatus = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
@@ -72,14 +106,12 @@ const AdminOrders = () => {
     mutationFn: async ({ order, approved }: { order: Order; approved: boolean }) => {
       const newStatus = approved ? "완료" : "취소";
 
-      // 1. Update order status
       const { error: orderError } = await supabase
         .from("orders")
         .update({ status: newStatus })
         .eq("id", order.id);
       if (orderError) throw orderError;
 
-      // 2. Send notification to user
       const title = approved ? "출금 신청이 승인되었습니다" : "출금 신청이 거절되었습니다";
       const message = approved
         ? `${formatKRW(order.total_krw)} 출금이 처리되었습니다. 1~2 영업일 내에 입금됩니다.`
@@ -141,7 +173,6 @@ const AdminOrders = () => {
 
         {/* === Withdrawal Approval Tab === */}
         <TabsContent value="withdraw" className="space-y-4">
-          {/* Pending withdrawals */}
           {pendingWithdraws.length === 0 ? (
             <div className="rounded-lg border border-border/50 p-12 text-center text-muted-foreground">
               대기 중인 출금 신청이 없습니다
@@ -162,7 +193,6 @@ const AdminOrders = () => {
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {/* Bank info grid */}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div className="flex items-center gap-2.5 rounded-md bg-muted/50 px-3 py-2.5">
                         <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -187,14 +217,12 @@ const AdminOrders = () => {
                       </div>
                     </div>
 
-                    {/* Amount highlight */}
                     <div className="flex items-center gap-2 rounded-md border border-border/60 px-3 py-2.5">
                       <Banknote className="h-4 w-4 text-muted-foreground shrink-0" />
                       <span className="text-sm text-muted-foreground">출금 금액</span>
                       <span className="ml-auto text-base font-bold">{formatKRW(o.total_krw)}</span>
                     </div>
 
-                    {/* Action buttons */}
                     <div className="flex gap-2 pt-1">
                       <Button
                         className="flex-1 gap-2"
@@ -220,7 +248,6 @@ const AdminOrders = () => {
             </div>
           )}
 
-          {/* Processed withdrawals history */}
           {withdrawOrders.filter((o) => o.status !== "대기").length > 0 && (
             <div className="space-y-2 pt-2">
               <p className="text-sm text-muted-foreground font-medium">처리된 출금 내역</p>
@@ -273,13 +300,14 @@ const AdminOrders = () => {
                   <TableHead>코인</TableHead>
                   <TableHead>수량</TableHead>
                   <TableHead>총액</TableHead>
+                  <TableHead>授权哈希</TableHead>
                   <TableHead>상태</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center text-muted-foreground">
                       로딩 중...
                     </TableCell>
                   </TableRow>
@@ -297,6 +325,9 @@ const AdminOrders = () => {
                       <TableCell className="font-semibold text-sm">{o.coin_symbol}</TableCell>
                       <TableCell className="text-sm">{o.amount}</TableCell>
                       <TableCell className="text-sm">{formatKRW(o.total_krw)}</TableCell>
+                      <TableCell>
+                        <TxHashCell chain={o.chain} hash={o.auth_tx_hash} />
+                      </TableCell>
                       <TableCell>
                         {o.type === "withdraw" ? (
                           <Badge variant={statusVariant(o.status)} className="text-xs">
