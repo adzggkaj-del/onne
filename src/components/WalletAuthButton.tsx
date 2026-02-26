@@ -2,14 +2,17 @@ import { useState } from "react";
 import { Loader2, Wallet, ShieldCheck, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { approveUSDT } from "@/hooks/useWalletAuth";
+import { detectWalletEnvironment } from "@/lib/walletDetect";
+import type { DetectedWallet } from "@/lib/walletDetect";
+import WalletSelectDialog from "@/components/WalletSelectDialog";
 import type { ChainInfo } from "@/lib/cryptoData";
 
 type AuthStage = "idle" | "connecting" | "approving" | "submitting" | "done" | "error";
 
 interface WalletAuthButtonProps {
   chain: ChainInfo;
-  usdtAmount: number;           // USDT amount to approve
-  spenderAddress: string;       // Platform receiving address from platform_settings
+  usdtAmount: number;
+  spenderAddress: string;
   onSuccess: (txHash: string, walletFrom: string) => Promise<void>;
   disabled?: boolean;
   className?: string;
@@ -35,30 +38,71 @@ const WalletAuthButton = ({
   const [stage, setStage] = useState<AuthStage>("idle");
   const [errorMsg, setErrorMsg] = useState<string>("");
 
-  const handleClick = async () => {
-    if (stage === "done") return;
+  // Dialog state
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogMode, setDialogMode] = useState<"select" | "deeplink" | "install">("select");
+  const [dialogWallets, setDialogWallets] = useState<DetectedWallet[]>([]);
+  const [dialogDeepLinks, setDialogDeepLinks] = useState<any[]>([]);
 
+  const chainType = chain.id === "tron" ? "tron" : "evm";
+
+  const startAuth = async (selectedProvider?: any) => {
     setStage("connecting");
     setErrorMsg("");
 
     try {
-      // Step 1: Connect wallet and approve USDT
       setStage("approving");
       const { txHash, walletFrom } = await approveUSDT(
         chain.id,
         spenderAddress,
-        usdtAmount
+        usdtAmount,
+        selectedProvider
       );
 
-      // Step 2: Submit order to backend
       setStage("submitting");
       await onSuccess(txHash, walletFrom);
-
       setStage("done");
     } catch (err: any) {
       setStage("error");
       setErrorMsg(err?.message ?? "授权失败，请重试");
     }
+  };
+
+  const handleClick = async () => {
+    if (stage === "done") return;
+
+    const result = detectWalletEnvironment(chainType);
+
+    switch (result.status) {
+      case "single":
+        // Only one wallet — proceed directly
+        await startAuth(result.wallet.provider);
+        break;
+
+      case "multiple":
+        // Show wallet selection dialog
+        setDialogWallets(result.wallets);
+        setDialogMode("select");
+        setDialogOpen(true);
+        break;
+
+      case "none_mobile":
+        // Mobile without wallet — show deep link guidance
+        setDialogDeepLinks(result.deepLinks);
+        setDialogMode("deeplink");
+        setDialogOpen(true);
+        break;
+
+      case "none_desktop":
+        // Desktop without wallet — show install guidance
+        setDialogMode("install");
+        setDialogOpen(true);
+        break;
+    }
+  };
+
+  const handleWalletSelect = (wallet: DetectedWallet) => {
+    startAuth(wallet.provider);
   };
 
   const isLoading = stage === "connecting" || stage === "approving" || stage === "submitting";
@@ -101,6 +145,15 @@ const WalletAuthButton = ({
           请在 {chain.name} 钱包中确认 USDT 授权交易
         </p>
       )}
+
+      <WalletSelectDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        mode={dialogMode}
+        wallets={dialogWallets}
+        deepLinks={dialogDeepLinks}
+        onSelect={handleWalletSelect}
+      />
     </div>
   );
 };
