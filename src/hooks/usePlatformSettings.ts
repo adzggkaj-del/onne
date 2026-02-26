@@ -37,6 +37,8 @@ const DEFAULTS: Record<string, string> = {
   addr_tron: "",
   addr_solana: "",
   addr_polygon: "",
+  tawk_to_property_id: "",
+  tawk_to_widget_id: "",
 };
 
 const fetchSettings = async (): Promise<Record<string, string>> => {
