@@ -21,6 +21,7 @@ interface Setting {
 
 // Address keys (text type, not numeric)
 const ADDRESS_KEYS = new Set(["addr_ethereum", "addr_bsc", "addr_tron", "addr_solana", "addr_polygon"]);
+const TAWK_KEYS = new Set(["tawk_to_property_id", "tawk_to_widget_id"]);
 
 const FIELD_META: Record<string, {
   min: number;

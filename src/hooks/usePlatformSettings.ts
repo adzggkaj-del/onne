@@ -82,5 +82,7 @@ export const usePlatformSettings = (): PlatformSettings => {
     krwRate: get("krw_rate"),
     isLoading,
     addresses,
+    tawkPropertyId: data?.["tawk_to_property_id"] ?? "",
+    tawkWidgetId: data?.["tawk_to_widget_id"] ?? "",
   };
 };

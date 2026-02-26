@@ -2,6 +2,7 @@ import { Outlet } from "react-router-dom";
 import TopNav from "./TopNav";
 import AppSidebar from "./AppSidebar";
 import MobileTabBar from "./MobileTabBar";
+import TawkToWidget from "./TawkToWidget";
 
 const Layout = () => {
   return (
@@ -14,6 +15,7 @@ const Layout = () => {
         </main>
       </div>
       <MobileTabBar />
+      <TawkToWidget />
     </div>
   );
 };
