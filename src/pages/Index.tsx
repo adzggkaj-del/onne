@@ -200,6 +200,28 @@ const Index = () => {
                 ))}
           </div>
         </section>
+
+        {/* Partners */}
+        <section className="py-6">
+          <h2 className="text-lg font-bold mb-4">파트너</h2>
+          <div className="flex flex-wrap items-center justify-center gap-6 md:gap-10">
+            {[
+              { name: "Visa", url: "https://primexbt.com/_next/static/media/Visa.937c0a5f.svg" },
+              { name: "Mastercard", url: "https://primexbt.com/_next/static/media/Mastercard.7b1f0d2d.svg" },
+              { name: "Skrill", url: "https://primexbt.com/_next/static/media/SkrillLogo.eec3e8fc.svg" },
+              { name: "Standard Bank", url: "https://primexbt.com/_next/static/media/StandardBankOfSouthAfricaLogo.1fd5dabf.svg" },
+              { name: "Neteller", url: "https://primexbt.com/_next/static/media/Neteller.14f4589d.svg" },
+              { name: "Binance Pay", url: "https://primexbt.com/_next/static/media/BinancePay.13985e69.svg" },
+            ].map((partner) => (
+              <img
+                key={partner.name}
+                src={partner.url}
+                alt={partner.name}
+                className="h-6 md:h-8 grayscale opacity-60 hover:grayscale-0 hover:opacity-100 transition-all duration-300"
+              />
+            ))}
+          </div>
+        </section>
       </div>
     </AnimatedPage>
   );
