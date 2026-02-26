@@ -206,8 +206,11 @@ const AdminSettings = () => {
   // Address settings
   const addressSettings = settings.filter((s) => ADDRESS_KEYS.has(s.key));
 
+  // Tawk.to settings
+  const tawkSettings = settings.filter((s) => TAWK_KEYS.has(s.key));
+
   // Completely unknown settings
-  const ungrouped = settings.filter((s) => !FIELD_META[s.key] && !ADDRESS_KEYS.has(s.key));
+  const ungrouped = settings.filter((s) => !FIELD_META[s.key] && !ADDRESS_KEYS.has(s.key) && !TAWK_KEYS.has(s.key));
 
   return (
     <div className="p-4 md:p-6 max-w-3xl mx-auto space-y-8">
