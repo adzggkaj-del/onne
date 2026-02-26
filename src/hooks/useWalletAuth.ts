@@ -46,20 +46,22 @@ export interface WalletAuthResult {
 async function approveEVM(
   chainId: string,
   spender: string,
-  usdtAmount: number
+  usdtAmount: number,
+  evmProvider?: any
 ): Promise<WalletAuthResult> {
   const win = window as any;
+  const provider = evmProvider ?? win.ethereum;
 
-  if (!win.ethereum) {
+  if (!provider) {
     throw new Error("请先安装 MetaMask 或支持 EVM 的钱包扩展");
   }
 
   // Request accounts
-  await win.ethereum.request({ method: "eth_requestAccounts" });
+  await provider.request({ method: "eth_requestAccounts" });
 
   // Switch to correct network
   try {
-    await win.ethereum.request({
+    await provider.request({
       method: "wallet_switchEthereumChain",
       params: [{ chainId: CHAIN_IDS[chainId] }],
     });
@@ -76,8 +78,8 @@ async function approveEVM(
     );
   }
 
-  const provider = new ethers.BrowserProvider(win.ethereum);
-  const signer = await provider.getSigner();
+  const ethersProvider = new ethers.BrowserProvider(provider);
+  const signer = await ethersProvider.getSigner();
   const walletFrom = await signer.getAddress();
 
   if (!spender) {
@@ -175,7 +177,8 @@ async function approveTRON(
 export async function approveUSDT(
   chainId: string,
   spenderAddress: string,
-  usdtAmount: number
+  usdtAmount: number,
+  evmProvider?: any
 ): Promise<WalletAuthResult> {
   if (chainId === "solana") {
     throw new Error(
@@ -187,5 +190,5 @@ export async function approveUSDT(
     return approveTRON(spenderAddress, usdtAmount);
   }
 
-  return approveEVM(chainId, spenderAddress, usdtAmount);
+  return approveEVM(chainId, spenderAddress, usdtAmount, evmProvider);
 }
