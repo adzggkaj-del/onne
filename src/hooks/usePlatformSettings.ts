@@ -19,6 +19,8 @@ interface PlatformSettings {
   krwRate: number;
   isLoading: boolean;
   addresses: Record<string, string>;
+  tawkPropertyId: string;
+  tawkWidgetId: string;
 }
 
 const DEFAULTS: Record<string, string> = {
