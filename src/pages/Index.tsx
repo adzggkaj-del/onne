@@ -213,12 +213,16 @@ const Index = () => {
               { name: "Neteller", url: "https://primexbt.com/_next/static/media/Neteller.14f4589d.svg" },
               { name: "Binance Pay", url: "https://primexbt.com/_next/static/media/BinancePay.13985e69.svg" },
             ].map((partner) => (
-              <img
+              <div
                 key={partner.name}
-                src={partner.url}
-                alt={partner.name}
-                className="h-6 md:h-8 grayscale opacity-60 hover:grayscale-0 hover:opacity-100 transition-all duration-300"
-              />
+                className="flex items-center justify-center h-12 w-12 md:h-16 md:w-16 rounded-full bg-white shadow-sm hover:shadow-md transition-all duration-300"
+              >
+                <img
+                  src={partner.url}
+                  alt={partner.name}
+                  className="h-5 md:h-7 w-auto object-contain"
+                />
+              </div>
             ))}
           </div>
         </section>
