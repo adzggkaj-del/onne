@@ -353,6 +353,46 @@ const AdminSettings = () => {
             </div>
           )}
 
+          {/* Tawk.to Settings */}
+          {tawkSettings.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">고객 채팅 (Tawk.to)</h2>
+                <div className="flex-1 h-px bg-border/60" />
+              </div>
+              <div className="space-y-3">
+                {tawkSettings.map((s) => (
+                  <Card key={s.key} className="bg-card border-border/50">
+                    <CardContent className="p-4 space-y-2">
+                      <Label className="font-medium">{s.label}</Label>
+                      {s.description && <p className="text-xs text-muted-foreground">{s.description}</p>}
+                      <div className="flex gap-2">
+                        <Input
+                          value={values[s.key] ?? s.value}
+                          placeholder="tawk.to에서 발급받은 ID를 입력하세요"
+                          onChange={(e) => setValues({ ...values, [s.key]: e.target.value })}
+                          className="bg-secondary border-border/50 font-mono text-xs"
+                        />
+                        <Button
+                          size="sm"
+                          onClick={() => saveSetting.mutate({ key: s.key, value: values[s.key] ?? s.value })}
+                          disabled={(values[s.key] ?? s.value) === s.value || saveSetting.isPending}
+                          className="gap-1.5"
+                        >
+                          <Save className="h-3.5 w-3.5" /> 저장
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">마지막 수정: {new Date(s.updated_at).toLocaleString("ko-KR")}</p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+              <div className="flex items-start gap-2 p-3 rounded-lg bg-primary/5 border border-primary/10 text-xs text-muted-foreground">
+                <Info className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
+                <span>tawk.to 가입 후 관리 화면에서 Property ID와 Widget ID를 확인할 수 있습니다. 두 값 모두 입력해야 채팅 위젯이 표시됩니다.</span>
+              </div>
+            </div>
+
           {/* Unknown / ungrouped fallback */}
           {ungrouped.length > 0 && (
             <div className="space-y-3">
