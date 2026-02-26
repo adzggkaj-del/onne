@@ -19,6 +19,8 @@ interface PlatformSettings {
   krwRate: number;
   isLoading: boolean;
   addresses: Record<string, string>;
+  tawkPropertyId: string;
+  tawkWidgetId: string;
 }
 
 const DEFAULTS: Record<string, string> = {
@@ -35,6 +37,8 @@ const DEFAULTS: Record<string, string> = {
   addr_tron: "",
   addr_solana: "",
   addr_polygon: "",
+  tawk_to_property_id: "",
+  tawk_to_widget_id: "",
 };
 
 const fetchSettings = async (): Promise<Record<string, string>> => {
@@ -78,5 +82,7 @@ export const usePlatformSettings = (): PlatformSettings => {
     krwRate: get("krw_rate"),
     isLoading,
     addresses,
+    tawkPropertyId: data?.["tawk_to_property_id"] ?? "",
+    tawkWidgetId: data?.["tawk_to_widget_id"] ?? "",
   };
 };

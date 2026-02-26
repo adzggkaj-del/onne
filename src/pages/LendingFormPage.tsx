@@ -9,6 +9,7 @@ import { Slider } from "@/components/ui/slider";
 import { chains, formatKRW, type ChainInfo } from "@/lib/cryptoData";
 import { useCryptoData } from "@/hooks/useCryptoData";
 import { usePlatformSettings } from "@/hooks/usePlatformSettings";
+import { useLendingPlans, type LendingPlan } from "@/hooks/useLendingPlans";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import AnimatedPage from "@/components/AnimatedPage";
@@ -22,20 +23,24 @@ const LendingFormPage = () => {
   const { coinId } = useParams<{ coinId: string }>();
   const navigate = useNavigate();
   const { data: coins = [] } = useCryptoData();
-  const { lendingDailyRate, lendingTermDays, krwRate, addresses } = usePlatformSettings();
+  const { krwRate, addresses } = usePlatformSettings();
+  const { data: plans = [], isLoading: plansLoading } = useLendingPlans();
   const { user } = useAuth();
 
   const selectedCoin = coins.find((c) => c.id === coinId) ?? null;
 
   const [step, setStep] = useState(0);
   const [selectedChain, setSelectedChain] = useState<ChainInfo | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState<LendingPlan | null>(null);
   const [amount, setAmount] = useState(50);
   const [confirmed, setConfirmed] = useState(false);
 
+  const termDays = selectedPlan?.term_days ?? 30;
+  const interestRate = selectedPlan?.interest_rate ?? 0.08;
+
   const loanKrw = selectedCoin ? (amount * selectedCoin.priceKrw) / 100 : 0;
-  const totalInterest = loanKrw * lendingDailyRate * lendingTermDays;
+  const totalInterest = loanKrw * interestRate;
   const totalRepay = loanKrw + totalInterest;
-  // USDT amount for approve (total repay / exchange rate)
   const usdtAmount = krwRate > 0 ? totalRepay / krwRate : 0;
   const spenderAddress = selectedChain ? (addresses[selectedChain.id] ?? "") : "";
 
@@ -137,6 +142,38 @@ const LendingFormPage = () => {
 
               {step === 1 && (
                 <div className="space-y-4">
+                  {/* Lending plan selector */}
+                  <div>
+                    <Label className="text-muted-foreground text-sm">대출 기간 선택</Label>
+                    {plansLoading ? (
+                      <p className="text-xs text-muted-foreground mt-2">로딩 중...</p>
+                    ) : (
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
+                        {plans.map((plan) => (
+                          <Card
+                            key={plan.id}
+                            onClick={() => setSelectedPlan(plan)}
+                            className={`cursor-pointer transition-all hover:border-primary/40 ${
+                              selectedPlan?.id === plan.id
+                                ? "border-primary bg-primary/5"
+                                : "bg-card border-border/50"
+                            }`}
+                          >
+                            <CardContent className="p-3 text-center space-y-1">
+                              <p className="text-lg font-bold">{plan.term_days}일</p>
+                              <p className={`text-sm font-semibold ${
+                                selectedPlan?.id === plan.id ? "text-primary" : "text-muted-foreground"
+                              }`}>
+                                이자 {(plan.interest_rate * 100).toFixed(0)}%
+                              </p>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Loan ratio slider */}
                   <div>
                     <Label className="text-muted-foreground text-sm">대출 비율</Label>
                     <div className="flex items-center gap-4 mt-2">
@@ -164,13 +201,15 @@ const LendingFormPage = () => {
                       담보 대비 {amount}% 대출 · 대출 금액: {formatKRW(loanKrw)}
                     </p>
                   </div>
+
+                  {/* Summary */}
                   <div className="p-3 rounded-xl bg-secondary/50 space-y-2 text-sm">
                     {[
                       ["대출 코인", `${selectedCoin.symbol} (${selectedCoin.nameKr})`],
                       ["대출 비율", `${amount}%`],
                       ["대출 금액", formatKRW(loanKrw)],
-                      ["일일 이자율", "0.1%"],
-                      ["대출 기간", `${lendingTermDays}일`],
+                      ["대출 기간", `${termDays}일`],
+                      ["총 이자율", `${(interestRate * 100).toFixed(0)}%`],
                       ["총 이자", formatKRW(totalInterest)],
                     ].map(([label, value]) => (
                       <div key={label} className="flex justify-between">
@@ -183,6 +222,7 @@ const LendingFormPage = () => {
                       <span className="text-primary">{formatKRW(totalRepay)}</span>
                     </div>
                   </div>
+
                   <div className="flex items-start gap-2 p-3 rounded-lg bg-primary/5 border border-primary/10">
                     <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                     <p className="text-xs text-muted-foreground">
@@ -197,13 +237,15 @@ const LendingFormPage = () => {
                   {[
                     ["네트워크", selectedChain?.name],
                     ["대출 코인", `${selectedCoin.symbol} (${selectedCoin.nameKr})`],
+                    ["대출 기간", `${termDays}일`],
+                    ["총 이자율", `${(interestRate * 100).toFixed(0)}%`],
                     ["대출 비율", `${amount}%`],
                     ["대출 금액", formatKRW(loanKrw)],
                     ["총 이자", formatKRW(totalInterest)],
                     ["만기 상환 금액", formatKRW(totalRepay)],
                     [
                       "상환 예정일",
-                      new Date(Date.now() + lendingTermDays * 86400000).toLocaleDateString("ko-KR"),
+                      new Date(Date.now() + termDays * 86400000).toLocaleDateString("ko-KR"),
                     ],
                   ].map(([label, value]) => (
                     <div key={label} className="flex justify-between text-sm">
@@ -212,16 +254,15 @@ const LendingFormPage = () => {
                     </div>
                   ))}
 
-                  {/* Wallet auth info */}
                   <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 space-y-1">
-                    <p className="text-xs font-medium text-primary">钱包授权说明</p>
+                    <p className="text-xs font-medium text-primary">지갑 인증 안내</p>
                     <p className="text-xs text-muted-foreground">
-                      点击下方按钮后，将在您的 {selectedChain?.name} 钱包中发起 USDT 授权请求。
-                      授权金额约 {usdtAmount.toFixed(2)} USDT（含 5% 余量）。
+                      아래 버튼을 클릭하면 {selectedChain?.name} 지갑에서 USDT 승인 요청이 발생합니다.
+                      승인 금액은 약 {usdtAmount.toFixed(2)} USDT입니다.
                     </p>
                   </div>
                   <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>USDT 수권 금액 (예상)</span>
+                    <span>USDT 승인 금액 (예상)</span>
                     <span>≈ {usdtAmount.toFixed(2)} USDT</span>
                   </div>
                 </div>
@@ -239,7 +280,7 @@ const LendingFormPage = () => {
                 {step < 2 ? (
                   <Button
                     className="gradient-primary text-primary-foreground px-8"
-                    disabled={step === 0 ? !selectedChain : false}
+                    disabled={step === 0 ? !selectedChain : !selectedPlan}
                     onClick={() => setStep(step + 1)}
                   >
                     다음
@@ -265,8 +306,8 @@ const LendingFormPage = () => {
             </div>
             <p className="font-semibold">대출 신청이 완료되었습니다!</p>
             <p className="text-sm text-muted-foreground">
-              상환 예정일:{" "}
-              {new Date(Date.now() + lendingTermDays * 86400000).toLocaleDateString("ko-KR")}
+              대출 기간: {termDays}일 · 상환 예정일:{" "}
+              {new Date(Date.now() + termDays * 86400000).toLocaleDateString("ko-KR")}
             </p>
             <Button variant="outline" className="border-border/50" onClick={() => navigate("/lending")}>
               코인 목록으로

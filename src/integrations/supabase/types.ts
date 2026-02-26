@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      lending_plans: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          id: string
+          interest_rate: number
+          label: string
+          sort_order: number
+          term_days: number
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          interest_rate: number
+          label: string
+          sort_order?: number
+          term_days: number
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          interest_rate?: number
+          label?: string
+          sort_order?: number
+          term_days?: number
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string
