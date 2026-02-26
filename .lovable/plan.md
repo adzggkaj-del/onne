@@ -1,78 +1,98 @@
 
 
-# 解决钱包支持的三个核心问题
+# 借贷周期选择 + Tawk.to 客服集成
 
-## 问题概述
+## 一、借贷周期与利率选择
 
-1. **无多钱包选择** - 当用户安装了多个钱包扩展时，系统默认使用第一个检测到的，用户无法选择
-2. **手机普通浏览器不支持** - 在 Safari/Chrome 等普通浏览器中无 `window.ethereum` 或 `window.tronWeb`，用户只能看到"请安装钱包"的错误提示
-3. **无 Deep Link 引导** - 手机端没有引导用户跳转到钱包 App 内置浏览器的机制
+### 现状
+当前借贷页面的期限（30天）和日利率（0.1%）是由后台 `platform_settings` 统一配置的固定值，用户无法选择不同的借贷方案。
 
-## 解决方案
+### 方案
+在借贷表单的第二步（"大出设定"）中，新增借贷周期选择器，提供多个预设方案供用户选择。
 
-采用 **钱包检测 + Deep Link 引导** 的方案（不引入 WalletConnect，避免增加复杂度和依赖）：
+**预设借贷方案（前端硬编码 + 后台可配置）：**
 
-### 1. 新建钱包检测工具 `src/lib/walletDetect.ts`
+| 周期 | 总利率 | 说明 |
+|------|--------|------|
+| 7天 | 3% | 短期借贷 |
+| 15天 | 5% | 中期借贷 |
+| 30天 | 8% | 标准借贷 |
+| 60天 | 12% | 长期借贷 |
 
-- 检测当前环境中可用的钱包（MetaMask、OKX Wallet、Trust Wallet、TronLink 等）
-- 检测是否为移动端普通浏览器（无钱包注入）
-- 提供各钱包 App 的 Deep Link URL，用于跳转到钱包内置浏览器打开当前页面
+### 需要新增的数据库表
 
-### 2. 新建钱包选择弹窗 `src/components/WalletSelectDialog.tsx`
-
-- 当检测到多个钱包时，弹出选择器让用户选择使用哪个钱包
-- 当检测到无钱包（移动端普通浏览器）时，显示引导界面：
-  - 展示 MetaMask / TronLink / imToken 等钱包 App 图标
-  - 点击后通过 Deep Link 跳转到对应钱包 App 的 DApp 浏览器
-  - 附带说明文字："请在钱包 App 中打开本网站完成授权"
-
-### 3. 修改 `src/hooks/useWalletAuth.ts`
-
-- EVM 链：支持接收指定的 provider（当用户选择了特定钱包时使用该 provider 而非默认的 `window.ethereum`）
-- 多钱包检测：识别 `window.ethereum.providers` 数组（EIP-6963 兼容），区分不同钱包
-
-### 4. 修改 `src/components/WalletAuthButton.tsx`
-
-- 点击授权按钮时，先执行钱包检测：
-  - 如果检测到多个钱包 → 弹出选择器
-  - 如果检测到无钱包（手机普通浏览器）→ 弹出引导界面
-  - 如果只有一个钱包 → 直接走现有流程
-- 集成 WalletSelectDialog 组件
-
-## 技术细节
-
-### Deep Link 格式
+创建 `lending_plans` 表存储借贷方案，管理员可在后台动态配置：
 
 ```text
-MetaMask:   https://metamask.app.link/dapp/{当前页面URL}
-TronLink:   tronlinkoutside://pull.activity?param={base64URL}
-Trust:      https://link.trustwallet.com/open_url?url={当前页面URL}
-imToken:    imtokenv2://navigate/DappView?url={当前页面URL}
-OKX:        okx://wallet/dapp/url?dappUrl={当前页面URL}
+lending_plans:
+  id (uuid, PK)
+  term_days (integer)       -- 借贷天数
+  interest_rate (numeric)   -- 总利率，如 0.05 表示 5%
+  label (text)              -- 显示名称，如 "15天 · 5%"
+  enabled (boolean)         -- 是否启用
+  sort_order (integer)      -- 排序
+  created_at (timestamptz)
 ```
 
-### 多钱包检测逻辑
+RLS: 所有人可读，管理员可增删改。
 
+### 前端改动
+
+**修改 `src/pages/LendingFormPage.tsx`：**
+- 新增状态 `selectedPlan` 用于存储用户选择的借贷方案
+- 在 step 1 中，大出比率滑块之前添加借贷周期选择卡片组
+- 利息计算改为：`totalInterest = loanKrw * selectedPlan.interestRate`（总利率，非日利率）
+- 订单保存时记录选择的期限天数
+
+**新增 `src/hooks/useLendingPlans.ts`：**
+- 从 `lending_plans` 表获取启用的借贷方案列表
+- 按 `sort_order` 排序
+
+### UI 设计
+
+借贷周期选择器使用卡片网格样式（类似网络选择器），每个选项卡片显示：
+- 天数（大字）
+- 总利率（醒目颜色）
+- 选中状态高亮
+
+---
+
+## 二、Tawk.to 客服集成
+
+### 方案
+Tawk.to 只需嵌入一段 JS 脚本即可工作，无需后端改动。
+
+### 改动
+
+**修改 `index.html`：**
+- 在 `<body>` 结束标签前插入 Tawk.to 的嵌入脚本
+
+**或者创建 `src/components/TawkToWidget.tsx`（推荐）：**
+- 使用 `useEffect` 动态加载 Tawk.to 脚本
+- 在 `Layout.tsx` 中引入该组件
+- 优点：可控制何时加载（如仅登录后显示），且不污染 index.html
+
+Tawk.to 脚本格式：
 ```text
-EVM:
-  window.ethereum.providers (数组) → 多个钱包
-  window.ethereum.isMetaMask → MetaMask
-  window.ethereum.isTrust → Trust Wallet
-  window.okxwallet → OKX Wallet
-
-TRON:
-  window.tronLink → TronLink
-  window.tronWeb → imToken TRX 模式
+var Tawk_API = Tawk_API || {};
+var s1 = document.createElement("script");
+s1.src = 'https://embed.tawk.to/{PROPERTY_ID}/{WIDGET_ID}';
+document.head.appendChild(s1);
 ```
 
-### 文件变更清单
+用户需要在 tawk.to 注册账号并获取 Property ID 和 Widget ID。我们将使用平台设置（`platform_settings` 表）存储这两个值，管理员可在后台配置。
 
-| 文件 | 操作 |
-|------|------|
-| `src/lib/walletDetect.ts` | 新建 - 钱包检测与 Deep Link 工具 |
-| `src/components/WalletSelectDialog.tsx` | 新建 - 钱包选择/引导弹窗 |
-| `src/hooks/useWalletAuth.ts` | 修改 - 支持指定 provider |
-| `src/components/WalletAuthButton.tsx` | 修改 - 集成钱包选择逻辑 |
+---
 
-无需数据库变更，无需新增 npm 依赖。
+## 技术细节 - 文件变更清单
+
+| 文件 | 操作 | 说明 |
+|------|------|------|
+| 数据库迁移 | 新建 | 创建 `lending_plans` 表并插入默认数据 |
+| `src/hooks/useLendingPlans.ts` | 新建 | 获取借贷方案列表 |
+| `src/pages/LendingFormPage.tsx` | 修改 | 添加周期选择器，更新利息计算逻辑 |
+| `src/components/TawkToWidget.tsx` | 新建 | Tawk.to 客服聊天组件 |
+| `src/components/Layout.tsx` | 修改 | 引入 TawkToWidget |
+| `src/hooks/usePlatformSettings.ts` | 修改 | 添加 tawk_to_property_id 和 tawk_to_widget_id 默认值 |
+| `src/pages/admin/AdminSettings.tsx` | 修改 | 添加 Tawk.to 配置和借贷方案管理入口 |
 
