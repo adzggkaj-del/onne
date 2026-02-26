@@ -392,6 +392,7 @@ const AdminSettings = () => {
                 <span>tawk.to 가입 후 관리 화면에서 Property ID와 Widget ID를 확인할 수 있습니다. 두 값 모두 입력해야 채팅 위젯이 표시됩니다.</span>
               </div>
             </div>
+          )}
 
           {/* Unknown / ungrouped fallback */}
           {ungrouped.length > 0 && (
