@@ -7,8 +7,12 @@ const TawkToWidget = () => {
   useEffect(() => {
     if (!tawkPropertyId || !tawkWidgetId) return;
 
-    // Avoid duplicate script
+    // Already loaded
     if (document.getElementById("tawk-to-script")) return;
+
+    // Init global API object before script loads
+    (window as any).Tawk_API = (window as any).Tawk_API || {};
+    (window as any).Tawk_LoadStart = new Date();
 
     const s = document.createElement("script");
     s.id = "tawk-to-script";
@@ -18,14 +22,7 @@ const TawkToWidget = () => {
     s.setAttribute("crossorigin", "*");
     document.head.appendChild(s);
 
-    return () => {
-      const el = document.getElementById("tawk-to-script");
-      if (el) el.remove();
-      // Clean up tawk globals
-      if ((window as any).Tawk_API) {
-        try { (window as any).Tawk_API.hideWidget?.(); } catch {}
-      }
-    };
+    // No cleanup — Tawk.to manages its own lifecycle once loaded
   }, [tawkPropertyId, tawkWidgetId]);
 
   return null;
