@@ -24,7 +24,9 @@ const Index = () => {
         {!user && (
           <section className="rounded-2xl bg-card border border-border/50 p-6 md:p-10">
             <h1 className="text-xl md:text-3xl font-bold mb-5 leading-tight">
-              안전하고 빠른 <span className="text-gradient">암호화폐 거래소</span>
+              안전하고 빠른
+              <br />
+              <span className="text-gradient text-2xl md:text-4xl">암호화폐 거래소</span>
             </h1>
             <ul className="space-y-2.5">
               {[
