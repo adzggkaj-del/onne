@@ -24,6 +24,7 @@ const AuthPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [phone, setPhone] = useState("");
 
   // Forgot password state
   const [forgotOpen, setForgotOpen] = useState(false);
