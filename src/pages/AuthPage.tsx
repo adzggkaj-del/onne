@@ -168,6 +168,10 @@ const AuthPage = () => {
                       </button>
                     </div>
                   </div>
+                  <div>
+                    <Label className="text-muted-foreground">휴대폰 번호</Label>
+                    <Input type="tel" placeholder="010-0000-0000" value={phone} onChange={(e) => setPhone(e.target.value)} className="mt-1 bg-secondary border-border/50" />
+                  </div>
                   <Button type="submit" className="w-full gradient-primary text-primary-foreground" disabled={submitting}>
                     {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                     회원가입
