@@ -60,17 +60,20 @@ const AuthPage = () => {
       return;
     }
     setSubmitting(true);
-    const { error } = await signUp(email, password, username);
+    const { error } = await signUp(email, password, username, phone);
     setSubmitting(false);
     if (error) {
       toast({ title: "회원가입 실패", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "회원가입 완료", description: "이메일을 확인해 주세요." });
-      setEmail("");
-      setPassword("");
-      setConfirmPassword("");
-      setUsername("");
-      setTab("login");
+      // Update phone in profile
+      if (phone) {
+        const { data: { user: newUser } } = await supabase.auth.getUser();
+        if (newUser) {
+          await supabase.from("profiles").update({ phone }).eq("user_id", newUser.id);
+        }
+      }
+      toast({ title: "회원가입 완료" });
+      navigate("/");
     }
   };
 
