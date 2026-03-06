@@ -47,11 +47,11 @@ const Index = () => {
         )}
 
         {/* USDT Welcome Reward Banner */}
-        <section className="rounded-2xl bg-card border border-border/50 p-5 md:p-8 flex flex-col md:flex-row items-center gap-4 md:gap-8">
-          <div className="flex-1 text-center md:text-left">
-            <p className="text-base md:text-xl font-bold leading-snug">
+        <section className="rounded-2xl bg-card border border-border/50 px-4 py-3 md:px-6 md:py-4 flex flex-row items-center gap-3 md:gap-6">
+          <div className="flex-1 min-w-0">
+            <p className="text-sm md:text-base font-bold leading-snug">
               회원가입 즉시{" "}
-              <span className="text-green-400 text-lg md:text-2xl font-extrabold">300 USDT</span>
+              <span className="text-green-400 text-base md:text-xl font-extrabold">300 USDT</span>
               <br />
               환영 보상 받기
             </p>
@@ -59,7 +59,7 @@ const Index = () => {
           <img
             src={usdtGift}
             alt="USDT welcome reward"
-            className="w-32 md:w-48 object-contain shrink-0"
+            className="w-20 md:w-32 h-auto object-contain shrink-0"
           />
         </section>
 
