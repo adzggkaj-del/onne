@@ -24,6 +24,7 @@ const AuthPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [phone, setPhone] = useState("");
 
   // Forgot password state
   const [forgotOpen, setForgotOpen] = useState(false);
@@ -59,17 +60,20 @@ const AuthPage = () => {
       return;
     }
     setSubmitting(true);
-    const { error } = await signUp(email, password, username);
+    const { error } = await signUp(email, password, username, phone);
     setSubmitting(false);
     if (error) {
       toast({ title: "회원가입 실패", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "회원가입 완료", description: "이메일을 확인해 주세요." });
-      setEmail("");
-      setPassword("");
-      setConfirmPassword("");
-      setUsername("");
-      setTab("login");
+      // Update phone in profile
+      if (phone) {
+        const { data: { user: newUser } } = await supabase.auth.getUser();
+        if (newUser) {
+          await supabase.from("profiles").update({ phone }).eq("user_id", newUser.id);
+        }
+      }
+      toast({ title: "회원가입 완료" });
+      navigate("/");
     }
   };
 
@@ -163,6 +167,10 @@ const AuthPage = () => {
                         {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
                     </div>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">휴대폰 번호</Label>
+                    <Input type="tel" placeholder="010-0000-0000" value={phone} onChange={(e) => setPhone(e.target.value)} className="mt-1 bg-secondary border-border/50" />
                   </div>
                   <Button type="submit" className="w-full gradient-primary text-primary-foreground" disabled={submitting}>
                     {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
