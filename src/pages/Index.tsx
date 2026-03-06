@@ -20,108 +20,57 @@ const Index = () => {
   return (
     <AnimatedPage>
       <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto">
-        {/* Hero Banner - only for non-logged-in users */}
+        {/* Hero Banner */}
         {!user && (
-          <section className="relative overflow-hidden rounded-2xl gradient-hero border border-primary/10 p-6 md:p-10">
-            <div className="relative z-10">
-              <h1 className="text-2xl md:text-4xl font-bold mb-3 leading-tight">
-                안전하고 빠른 <span className="text-gradient">암호화폐 거래</span>
-              </h1>
-              <p className="text-muted-foreground text-sm md:text-base mb-6 max-w-lg">
-                350개 이상의 코인을 한국 원화로 간편하게 거래하세요. 업계 최저 수수료와 실시간 시세를 제공합니다.
-              </p>
-              <div className="flex gap-3">
-                <Button className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold">거래 시작하기</Button>
-                <Button variant="outline" className="border-primary/30 text-foreground hover:bg-primary/10">
-                  더 알아보기
-                </Button>
-              </div>
-            </div>
-            <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-primary/5 blur-3xl" />
-            <div className="absolute -right-10 -bottom-10 h-40 w-40 rounded-full bg-accent/10 blur-2xl" />
+          <section className="rounded-2xl bg-card border border-border/50 p-6 md:p-10">
+            <h1 className="text-xl md:text-3xl font-bold mb-5 leading-tight">
+              안전하고 빠른 <span className="text-gradient">암호화폐 거래소</span>
+            </h1>
+            <ul className="space-y-2.5">
+              {[
+                "즉시거래",
+                "2분 이내 인증",
+                "외부지갑으로 구매",
+                "350+ 코인 지원",
+                "업계 최저 수수료",
+              ].map((item) => (
+                <li key={item} className="flex items-center gap-2.5 text-sm md:text-base text-muted-foreground">
+                  <span className="h-2 w-2 rounded-full gradient-primary shrink-0" />
+                  {item}
+                </li>
+              ))}
+            </ul>
           </section>
         )}
 
-        {/* Stats */}
-        {/* <section className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-          {stats.map((stat) => (
-            <Card key={stat.label} className="bg-card border-border/50 hover:border-primary/20 transition-colors">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <stat.icon className="h-4 w-4 text-primary" />
-                  <span className="text-xs font-medium text-success">{stat.change}</span>
-                </div>
-                <p className="text-xl md:text-2xl font-bold">{stat.value}</p>
-                <p className="text-xs text-muted-foreground mt-1">{stat.label}</p>
-              </CardContent>
-            </Card>
-          ))}
-        </section> */}
-
-        {/* Portfolio + Scrolling Transactions */}
-        <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Card className="bg-card border-border/50">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base font-semibold flex items-center gap-2">
-                  <PieChart className="h-4 w-4 text-primary" />내 자산 포트폴리오
-                </CardTitle>
-                <span className="text-xs text-muted-foreground">총 자산</span>
-              </div>
-              <p className="text-2xl font-bold">{formatKRW(50206860)}</p>
-              <p className="text-xs text-success">+3.24% (24시간)</p>
-            </CardHeader>
-            <CardContent className="pt-0 space-y-3">
-              {portfolio.map((item) => (
-                <div key={item.symbol} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full gradient-primary" />
-                    <span className="text-sm font-medium">{item.symbol}</span>
-                    <span className="text-xs text-muted-foreground">{item.amount}</span>
+        {/* Scrolling fake transactions - full width */}
+        <Card className="bg-card border-border/50 overflow-hidden">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-semibold flex items-center gap-2">
+              <Activity className="h-4 w-4 text-primary" />
+              실시간 거래 현황
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0 h-48 overflow-hidden relative">
+            <div className="absolute inset-0">
+              <div className="animate-scroll-up space-y-2.5">
+                {[...fakeTransactions, ...fakeTransactions].map((tx, i) => (
+                  <div key={i} className="flex items-center gap-2 text-xs px-1">
+                    <span className="font-medium text-foreground min-w-[3rem]">{tx.username}</span>
+                    <span className="text-muted-foreground font-mono">{tx.wallet}</span>
+                    <span
+                      className={`ml-auto font-bold whitespace-nowrap ${tx.action === "구매" ? "text-success" : "text-destructive"}`}
+                    >
+                      {tx.action} {tx.amount} {tx.symbol}
+                    </span>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm">{formatKRW(item.value)}</span>
-                    <span className="text-xs text-muted-foreground w-8 text-right">{item.pct}%</span>
-                  </div>
-                </div>
-              ))}
-              <div className="flex h-2 rounded-full overflow-hidden mt-2">
-                <div className="bg-primary" style={{ width: "52%" }} />
-                <div className="bg-accent/70" style={{ width: "30%" }} />
-                <div className="bg-success" style={{ width: "18%" }} />
+                ))}
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Scrolling fake transactions */}
-          <Card className="bg-card border-border/50 overflow-hidden">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <Activity className="h-4 w-4 text-primary" />
-                실시간 거래 현황
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0 h-48 overflow-hidden relative">
-              <div className="absolute inset-0">
-                <div className="animate-scroll-up space-y-2.5">
-                  {[...fakeTransactions, ...fakeTransactions].map((tx, i) => (
-                    <div key={i} className="flex items-center gap-2 text-xs px-1">
-                      <span className="font-medium text-foreground min-w-[3rem]">{tx.username}</span>
-                      <span className="text-muted-foreground font-mono">{tx.wallet}</span>
-                      <span
-                        className={`ml-auto font-bold whitespace-nowrap ${tx.action === "구매" ? "text-emerald-400" : "text-red-400"}`}
-                      >
-                        {tx.action} {tx.amount} {tx.symbol}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="absolute top-0 left-0 right-0 h-6 bg-gradient-to-b from-card to-transparent z-10" />
-              <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-card to-transparent z-10" />
-            </CardContent>
-          </Card>
-        </section>
+            </div>
+            <div className="absolute top-0 left-0 right-0 h-6 bg-gradient-to-b from-card to-transparent z-10" />
+            <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-card to-transparent z-10" />
+          </CardContent>
+        </Card>
 
         {/* Market List - display only */}
         <section>
