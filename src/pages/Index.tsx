@@ -11,12 +11,12 @@ import AnimatedPage from "@/components/AnimatedPage";
 import PriceFlash from "@/components/PriceFlash";
 import CoinIcon from "@/components/CoinIcon";
 
-const stats = [
-  { label: "24시간 거래량", value: "$48.2B", change: "+12.5%", icon: TrendingUp },
-  { label: "활성 사용자", value: "2.4M", change: "+8.3%", icon: Users },
-  { label: "상장 코인", value: "350+", change: "+15", icon: Coins },
-  { label: "평균 응답", value: "0.3초", change: "-12%", icon: Zap },
-];
+// const stats = [
+//   { label: "24시간 거래량", value: "$48.2B", change: "+12.5%", icon: TrendingUp },
+//   { label: "활성 사용자", value: "2.4M", change: "+8.3%", icon: Users },
+//   { label: "상장 코인", value: "350+", change: "+15", icon: Coins },
+//   { label: "평균 응답", value: "0.3초", change: "-12%", icon: Zap },
+// ];
 
 const portfolio = [
   { symbol: "BTC", amount: 0.245, value: 23926320, pct: 52 },
@@ -36,30 +36,28 @@ const Index = () => {
       <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto">
         {/* Hero Banner - only for non-logged-in users */}
         {!user && (
-        <section className="relative overflow-hidden rounded-2xl gradient-hero border border-primary/10 p-6 md:p-10">
-          <div className="relative z-10">
-            <h1 className="text-2xl md:text-4xl font-bold mb-3 leading-tight">
-              안전하고 빠른 <span className="text-gradient">암호화폐 거래</span>
-            </h1>
-            <p className="text-muted-foreground text-sm md:text-base mb-6 max-w-lg">
-              350개 이상의 코인을 한국 원화로 간편하게 거래하세요. 업계 최저 수수료와 실시간 시세를 제공합니다.
-            </p>
-            <div className="flex gap-3">
-              <Button className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold">
-                거래 시작하기
-              </Button>
-              <Button variant="outline" className="border-primary/30 text-foreground hover:bg-primary/10">
-                더 알아보기
-              </Button>
+          <section className="relative overflow-hidden rounded-2xl gradient-hero border border-primary/10 p-6 md:p-10">
+            <div className="relative z-10">
+              <h1 className="text-2xl md:text-4xl font-bold mb-3 leading-tight">
+                안전하고 빠른 <span className="text-gradient">암호화폐 거래</span>
+              </h1>
+              <p className="text-muted-foreground text-sm md:text-base mb-6 max-w-lg">
+                350개 이상의 코인을 한국 원화로 간편하게 거래하세요. 업계 최저 수수료와 실시간 시세를 제공합니다.
+              </p>
+              <div className="flex gap-3">
+                <Button className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold">거래 시작하기</Button>
+                <Button variant="outline" className="border-primary/30 text-foreground hover:bg-primary/10">
+                  더 알아보기
+                </Button>
+              </div>
             </div>
-          </div>
-          <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-primary/5 blur-3xl" />
-          <div className="absolute -right-10 -bottom-10 h-40 w-40 rounded-full bg-accent/10 blur-2xl" />
-        </section>
+            <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-primary/5 blur-3xl" />
+            <div className="absolute -right-10 -bottom-10 h-40 w-40 rounded-full bg-accent/10 blur-2xl" />
+          </section>
         )}
 
         {/* Stats */}
-        <section className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+        {/* <section className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
           {stats.map((stat) => (
             <Card key={stat.label} className="bg-card border-border/50 hover:border-primary/20 transition-colors">
               <CardContent className="p-4">
@@ -72,7 +70,7 @@ const Index = () => {
               </CardContent>
             </Card>
           ))}
-        </section>
+        </section> */}
 
         {/* Portfolio + Scrolling Transactions */}
         <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -80,8 +78,7 @@ const Index = () => {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base font-semibold flex items-center gap-2">
-                  <PieChart className="h-4 w-4 text-primary" />
-                  내 자산 포트폴리오
+                  <PieChart className="h-4 w-4 text-primary" />내 자산 포트폴리오
                 </CardTitle>
                 <span className="text-xs text-muted-foreground">총 자산</span>
               </div>
@@ -125,7 +122,9 @@ const Index = () => {
                     <div key={i} className="flex items-center gap-2 text-xs px-1">
                       <span className="font-medium text-foreground min-w-[3rem]">{tx.username}</span>
                       <span className="text-muted-foreground font-mono">{tx.wallet}</span>
-                      <span className={`ml-auto font-bold whitespace-nowrap ${tx.action === "구매" ? "text-emerald-400" : "text-red-400"}`}>
+                      <span
+                        className={`ml-auto font-bold whitespace-nowrap ${tx.action === "구매" ? "text-emerald-400" : "text-red-400"}`}
+                      >
                         {tx.action} {tx.amount} {tx.symbol}
                       </span>
                     </div>
@@ -180,7 +179,11 @@ const Index = () => {
                             const max = Math.max(...arr);
                             const height = max === min ? 50 : ((val - min) / (max - min)) * 100;
                             return (
-                              <div key={i} className={`flex-1 rounded-sm ${coin.change24h >= 0 ? "bg-success/60" : "bg-destructive/60"}`} style={{ height: `${Math.max(8, height)}%` }} />
+                              <div
+                                key={i}
+                                className={`flex-1 rounded-sm ${coin.change24h >= 0 ? "bg-success/60" : "bg-destructive/60"}`}
+                                style={{ height: `${Math.max(8, height)}%` }}
+                              />
                             );
                           })}
                         </div>
@@ -190,8 +193,14 @@ const Index = () => {
                           </PriceFlash>
                           <p className="text-xs text-muted-foreground">{formatVolume(coin.volume24h)}</p>
                         </div>
-                        <div className={`flex items-center gap-0.5 min-w-[4.5rem] justify-end ${coin.change24h >= 0 ? "text-success" : "text-destructive"}`}>
-                          {coin.change24h >= 0 ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
+                        <div
+                          className={`flex items-center gap-0.5 min-w-[4.5rem] justify-end ${coin.change24h >= 0 ? "text-success" : "text-destructive"}`}
+                        >
+                          {coin.change24h >= 0 ? (
+                            <ArrowUpRight className="h-3.5 w-3.5" />
+                          ) : (
+                            <ArrowDownRight className="h-3.5 w-3.5" />
+                          )}
                           <span className="text-sm font-medium">{Math.abs(coin.change24h).toFixed(2)}%</span>
                         </div>
                       </div>
@@ -209,7 +218,10 @@ const Index = () => {
               { name: "Visa", url: "https://primexbt.com/_next/static/media/Visa.937c0a5f.svg" },
               { name: "Mastercard", url: "https://primexbt.com/_next/static/media/Mastercard.7b1f0d2d.svg" },
               { name: "Skrill", url: "https://primexbt.com/_next/static/media/SkrillLogo.eec3e8fc.svg" },
-              { name: "Standard Bank", url: "https://primexbt.com/_next/static/media/StandardBankOfSouthAfricaLogo.1fd5dabf.svg" },
+              {
+                name: "Standard Bank",
+                url: "https://primexbt.com/_next/static/media/StandardBankOfSouthAfricaLogo.1fd5dabf.svg",
+              },
               { name: "Neteller", url: "https://primexbt.com/_next/static/media/Neteller.14f4589d.svg" },
               { name: "Binance Pay", url: "https://primexbt.com/_next/static/media/BinancePay.13985e69.svg" },
             ].map((partner) => (
@@ -217,11 +229,7 @@ const Index = () => {
                 key={partner.name}
                 className="flex items-center justify-center h-12 w-12 md:h-16 md:w-16 rounded-full bg-white shadow-sm hover:shadow-md transition-all duration-300"
               >
-                <img
-                  src={partner.url}
-                  alt={partner.name}
-                  className="h-5 md:h-7 w-auto object-contain"
-                />
+                <img src={partner.url} alt={partner.name} className="h-5 md:h-7 w-auto object-contain" />
               </div>
             ))}
           </div>
