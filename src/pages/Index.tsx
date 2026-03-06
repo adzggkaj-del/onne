@@ -1,7 +1,6 @@
 import { useMemo } from "react";
-import { TrendingUp, Users, Coins, Zap, ArrowUpRight, ArrowDownRight, PieChart, Activity } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, Activity } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatKRW, formatVolume, generateFakeTransactions } from "@/lib/cryptoData";
 import { useCryptoData } from "@/hooks/useCryptoData";
@@ -10,19 +9,6 @@ import { useAuth } from "@/hooks/useAuth";
 import AnimatedPage from "@/components/AnimatedPage";
 import PriceFlash from "@/components/PriceFlash";
 import CoinIcon from "@/components/CoinIcon";
-
-// const stats = [
-//   { label: "24시간 거래량", value: "$48.2B", change: "+12.5%", icon: TrendingUp },
-//   { label: "활성 사용자", value: "2.4M", change: "+8.3%", icon: Users },
-//   { label: "상장 코인", value: "350+", change: "+15", icon: Coins },
-//   { label: "평균 응답", value: "0.3초", change: "-12%", icon: Zap },
-// ];
-
-const portfolio = [
-  { symbol: "BTC", amount: 0.245, value: 23926320, pct: 52 },
-  { symbol: "ETH", amount: 3.12, value: 14012640, pct: 30 },
-  { symbol: "SOL", amount: 45.5, value: 12267900, pct: 18 },
-];
 
 const Index = () => {
   const { data: coins = [], isLoading } = useCryptoData();
