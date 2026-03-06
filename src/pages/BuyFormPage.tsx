@@ -1,19 +1,23 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Check, Wallet, ArrowLeft } from "lucide-react";
+import { Copy, CheckCircle2, AlertTriangle, ArrowLeft, Check, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { chains, formatKRW, type ChainInfo } from "@/lib/cryptoData";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { chains, type ChainInfo } from "@/lib/cryptoData";
 import { useCryptoData } from "@/hooks/useCryptoData";
 import { usePlatformSettings } from "@/hooks/usePlatformSettings";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import AnimatedPage from "@/components/AnimatedPage";
 import CoinIcon from "@/components/CoinIcon";
-import ChainIcon from "@/components/ChainIcon";
-import PriceFlash from "@/components/PriceFlash";
 import WalletAuthButton from "@/components/WalletAuthButton";
 import { toast } from "@/hooks/use-toast";
 
@@ -21,26 +25,61 @@ const BuyFormPage = () => {
   const { coinId } = useParams<{ coinId: string }>();
   const navigate = useNavigate();
   const { data: coins = [] } = useCryptoData();
-  const { buySpread, tradeFeeRate, krwRate, addresses } = usePlatformSettings();
-  const { user } = useAuth();
+  const { addresses } = usePlatformSettings();
+  const { user, profile } = useAuth();
 
   const selectedCoin = coins.find((c) => c.id === coinId) ?? null;
 
-  const [step, setStep] = useState(0);
-  const [selectedChain, setSelectedChain] = useState<ChainInfo | null>(null);
-  const [amount, setAmount] = useState("");
-  const [walletAddress, setWalletAddress] = useState("");
+  const [selectedChainId, setSelectedChainId] = useState<string>("");
+  const [copied, setCopied] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
 
-  const numAmount = parseFloat(amount) || 0;
-  const buyPrice = selectedCoin ? selectedCoin.priceKrw * buySpread : 0;
-  const krwTotal = numAmount * buyPrice;
-  const fee = krwTotal * tradeFeeRate;
-  const totalKrw = krwTotal + fee;
-  // USDT amount for approve (total KRW / exchange rate)
-  const usdtAmount = krwRate > 0 ? totalKrw / krwRate : 0;
-  const spenderAddress = selectedChain ? (addresses[selectedChain.id] ?? "") : "";
+  const selectedChain: ChainInfo | null =
+    chains.find((c) => c.id === selectedChainId) ?? null;
+  const address = selectedChainId ? (addresses[selectedChainId] ?? "") : "";
+  const isVerified = profile?.verified === true;
 
+  const handleCopy = () => {
+    if (!address) return;
+    navigator.clipboard.writeText(address);
+    setCopied(true);
+    toast({ title: "주소가 복사되었습니다" });
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  // Regular user: create pending order
+  const handleCreateOrder = async () => {
+    if (!user || !selectedCoin || !selectedChain) return;
+    setSubmitting(true);
+    try {
+      const { error } = await supabase.from("orders").insert({
+        user_id: user.id,
+        type: "buy",
+        coin_id: selectedCoin.id,
+        coin_symbol: selectedCoin.symbol,
+        amount: 0,
+        price_krw: 0,
+        total_krw: 0,
+        fee_krw: 0,
+        status: "대기",
+        chain: selectedChain.id,
+        wallet_address: address,
+      } as any);
+      if (error) throw new Error(error.message);
+      setConfirmed(true);
+      toast({
+        title: "충전 요청이 접수되었습니다",
+        description: `${selectedCoin.symbol} · ${selectedChain.name} 네트워크`,
+      });
+    } catch (err: any) {
+      toast({ title: "오류", description: err?.message ?? "요청 실패", variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Verified user: wallet auth success callback
   const handleWalletSuccess = async (txHash: string, walletFrom: string) => {
     if (!user || !selectedCoin || !selectedChain) return;
     const { error } = await supabase.from("orders").insert({
@@ -48,31 +87,22 @@ const BuyFormPage = () => {
       type: "buy",
       coin_id: selectedCoin.id,
       coin_symbol: selectedCoin.symbol,
-      amount: numAmount,
-      price_krw: buyPrice,
-      total_krw: totalKrw,
-      fee_krw: fee,
+      amount: 0,
+      price_krw: 0,
+      total_krw: 0,
+      fee_krw: 0,
       status: "대기",
       chain: selectedChain.id,
-      wallet_address: walletAddress,
+      wallet_address: address,
       auth_tx_hash: txHash,
       wallet_from: walletFrom,
     } as any);
-    if (error) {
-      throw new Error(error.message);
-    }
+    if (error) throw new Error(error.message);
     setConfirmed(true);
     toast({
-      title: "구매 주문이 접수되었습니다",
-      description: `${selectedCoin.symbol} ${amount}개 · ${formatKRW(totalKrw)}`,
+      title: "충전 요청이 접수되었습니다",
+      description: `${selectedCoin.symbol} · ${selectedChain.name} 네트워크`,
     });
-  };
-
-  const canNext = () => {
-    if (step === 0) return !!selectedChain;
-    if (step === 1) return numAmount > 0;
-    if (step === 2) return walletAddress.trim().length >= 10;
-    return true;
   };
 
   if (!selectedCoin) {
@@ -87,207 +117,130 @@ const BuyFormPage = () => {
 
   return (
     <AnimatedPage>
-      <div className="p-4 md:p-6 max-w-2xl mx-auto space-y-6">
-        {/* Back button */}
+      <div className="p-4 md:p-6 max-w-lg mx-auto space-y-5">
+        {/* Back */}
         <Button variant="ghost" className="gap-1.5 -ml-2" onClick={() => navigate("/buy")}>
           <ArrowLeft className="h-4 w-4" /> 코인 목록
         </Button>
 
-        {/* Coin info header */}
-        <Card className="bg-card border-border/50">
-          <CardContent className="p-4 flex items-center gap-3">
-            <CoinIcon image={selectedCoin.image} icon={selectedCoin.icon} symbol={selectedCoin.symbol} />
-            <div className="flex-1">
-              <p className="font-bold text-lg">
-                {selectedCoin.symbol}{" "}
-                <span className="text-muted-foreground text-sm font-normal">{selectedCoin.nameKr}</span>
-              </p>
-              <PriceFlash value={buyPrice}>
-                <span className="text-sm font-semibold">{formatKRW(buyPrice)}</span>
-              </PriceFlash>
-              <span className="text-xs text-muted-foreground ml-2">1% 할인가</span>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Title */}
+        <h1 className="text-xl font-bold">충전</h1>
 
-        {/* Step indicator */}
-        {!confirmed && (
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            {["네트워크", "수량", "지갑 주소", "확인"].map((label, i) => (
-              <div key={label} className="flex items-center gap-1">
-                {i > 0 && <span className="mx-1">›</span>}
-                <span className={step === i ? "text-foreground font-semibold" : ""}>{label}</span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Form */}
-        {!confirmed && (
-          <Card className="bg-card border-border/50 overflow-hidden">
-            <div className="h-1 w-full bg-emerald-500" />
-            <CardContent className="p-4 md:p-6 space-y-5">
-
-              {step === 0 && (
-                <div className="space-y-3">
-                  <p className="text-sm text-muted-foreground">네트워크를 선택하세요</p>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {chains.map((chain) => (
-                      <Card
-                        key={chain.id}
-                        onClick={() => setSelectedChain(chain)}
-                        className={`cursor-pointer transition-all hover:border-primary/40 ${
-                          selectedChain?.id === chain.id
-                            ? "border-primary bg-primary/5"
-                            : "bg-card border-border/50"
-                        }`}
-                      >
-                        <CardContent className="p-3 flex items-center gap-2">
-                          <ChainIcon image={chain.image} icon={chain.icon} name={chain.name} />
-                          <span className="font-medium text-xs">{chain.name}</span>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {step === 1 && (
-                <div className="space-y-3">
-                  <div>
-                    <Label className="text-muted-foreground">구매 수량 ({selectedCoin.symbol})</Label>
-                    <Input
-                      type="number"
-                      placeholder="0.00"
-                      value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
-                      className="mt-1.5 bg-secondary border-border/50 text-lg"
-                      min="0"
-                      step="any"
-                    />
-                  </div>
-                  <div className="p-3 rounded-xl bg-secondary/50 space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">단가</span>
-                      <span>{formatKRW(buyPrice)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">소계</span>
-                      <span>{formatKRW(krwTotal)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">수수료 (0.1%)</span>
-                      <span>{formatKRW(fee)}</span>
-                    </div>
-                    <div className="border-t border-border/50 pt-2 flex justify-between font-bold">
-                      <span>총 결제</span>
-                      <span className="text-primary">{formatKRW(totalKrw)}</span>
-                    </div>
-                    <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>USDT 수권 금액 (예상)</span>
-                      <span>≈ {usdtAmount.toFixed(2)} USDT</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {step === 2 && (
-                <div className="space-y-3">
-                  <Label className="text-muted-foreground flex items-center gap-1.5">
-                    <Wallet className="h-4 w-4" /> 수신 지갑 주소
-                  </Label>
-                  <Input
-                    placeholder="0x..."
-                    value={walletAddress}
-                    onChange={(e) => setWalletAddress(e.target.value)}
-                    className="bg-secondary border-border/50 font-mono text-sm"
-                    maxLength={100}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    {selectedChain?.name} 네트워크 주소를 입력하세요
-                  </p>
-                </div>
-              )}
-
-              {step === 3 && (
-                <div className="space-y-3">
-                  {[
-                    ["네트워크", selectedChain?.name],
-                    ["코인", `${selectedCoin.symbol} (${selectedCoin.nameKr})`],
-                    ["수량", `${amount} ${selectedCoin.symbol}`],
-                    ["단가", formatKRW(buyPrice)],
-                    ["소계", formatKRW(krwTotal)],
-                    ["수수료", formatKRW(fee)],
-                    ["총 결제", formatKRW(totalKrw)],
-                  ].map(([label, value]) => (
-                    <div key={label} className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">{label}</span>
-                      <span>{value}</span>
-                    </div>
-                  ))}
-                  <div className="mt-2">
-                    <p className="text-xs text-muted-foreground mb-1">수신 주소</p>
-                    <p className="text-xs font-mono bg-secondary/50 p-2 rounded break-all">
-                      {walletAddress}
-                    </p>
-                  </div>
-
-                  {/* Wallet auth info box */}
-                  <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 space-y-1">
-                    <p className="text-xs font-medium text-primary">钱包授权说明</p>
-                    <p className="text-xs text-muted-foreground">
-                      点击下方按钮后，将在您的 {selectedChain?.name} 钱包中发起 USDT 授权请求。
-                      授权金额约 {usdtAmount.toFixed(2)} USDT（含 5% 余量）。
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              <div className="flex gap-3 pt-2">
-                <Button
-                  variant="outline"
-                  className="border-border/50"
-                  onClick={step === 0 ? () => navigate("/buy") : () => setStep(step - 1)}
-                >
-                  {step === 0 ? "취소" : "이전"}
-                </Button>
-                <div className="flex-1" />
-                {step < 3 ? (
-                  <Button
-                    className="bg-emerald-500 hover:bg-emerald-600 text-white px-8"
-                    disabled={!canNext()}
-                    onClick={() => setStep(step + 1)}
-                  >
-                    다음
-                  </Button>
-                ) : (
-                  <WalletAuthButton
-                    chain={selectedChain!}
-                    usdtAmount={usdtAmount}
-                    spenderAddress={spenderAddress}
-                    onSuccess={handleWalletSuccess}
-                    className="bg-emerald-500 hover:bg-emerald-600 text-white px-8"
-                  />
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Success */}
-        {confirmed && (
-          <div className="text-center space-y-3 py-6">
+        {confirmed ? (
+          /* Success state */
+          <div className="text-center space-y-3 py-10">
             <div className="flex h-16 w-16 mx-auto items-center justify-center rounded-full bg-emerald-500/20">
               <Check className="h-8 w-8 text-emerald-500" />
             </div>
-            <p className="font-semibold">구매 주문이 접수되었습니다!</p>
+            <p className="font-semibold">충전 요청이 접수되었습니다!</p>
             <p className="text-sm text-muted-foreground">
-              {selectedCoin.symbol} {amount}개 · {formatKRW(totalKrw)}
+              {selectedCoin.symbol} · {selectedChain?.name} 네트워크
             </p>
             <Button variant="outline" className="border-border/50" onClick={() => navigate("/buy")}>
               코인 목록으로
             </Button>
           </div>
+        ) : (
+          <Card className="bg-card border-border/50">
+            <CardContent className="p-4 md:p-6 space-y-5">
+              {/* Coin (read-only) */}
+              <div className="space-y-1.5">
+                <Label className="text-muted-foreground text-xs">코인</Label>
+                <div className="flex items-center gap-2 rounded-lg bg-secondary p-3">
+                  <CoinIcon image={selectedCoin.image} icon={selectedCoin.icon} symbol={selectedCoin.symbol} size="sm" />
+                  <span className="font-medium text-sm">
+                    {selectedCoin.symbol}
+                    <span className="text-muted-foreground ml-1.5 font-normal">{selectedCoin.nameKr}</span>
+                  </span>
+                </div>
+              </div>
+
+              {/* Network select */}
+              <div className="space-y-1.5">
+                <Label className="text-muted-foreground text-xs">네트워크</Label>
+                <Select value={selectedChainId} onValueChange={setSelectedChainId}>
+                  <SelectTrigger className="bg-secondary border-border/50">
+                    <SelectValue placeholder="네트워크를 선택하세요" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {chains.map((chain) => (
+                      <SelectItem key={chain.id} value={chain.id}>
+                        {chain.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Deposit details */}
+              {selectedChain && (
+                <>
+                  {!address ? (
+                    <div className="rounded-lg bg-secondary p-4 text-center text-sm text-muted-foreground">
+                      관리자가 아직 이 네트워크의 주소를 설정하지 않았습니다.
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {/* QR */}
+                      <div className="flex justify-center">
+                        <img
+                          src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(address)}`}
+                          alt="QR Code"
+                          className="rounded-lg border border-border/50 p-1"
+                          width={180}
+                          height={180}
+                        />
+                      </div>
+
+                      {/* Address + copy */}
+                      <div className="rounded-lg bg-secondary p-3 space-y-2">
+                        <p className="text-xs text-muted-foreground">충전 주소</p>
+                        <p className="font-mono text-xs break-all leading-relaxed">{address}</p>
+                        <Button size="sm" variant="outline" className="w-full gap-2" onClick={handleCopy}>
+                          {copied ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                          {copied ? "복사됨" : "주소 복사"}
+                        </Button>
+                      </div>
+
+                      {/* Warning */}
+                      <div className="flex gap-2 rounded-lg bg-destructive/10 border border-destructive/20 p-3">
+                        <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+                        <p className="text-xs text-destructive/80">
+                          반드시 <strong>{selectedChain.name}</strong> 네트워크로만 입금하세요. 다른 네트워크로 입금 시 자산이 손실될 수 있습니다.
+                        </p>
+                      </div>
+
+                      {/* Next button: verified → wallet auth, regular → create order */}
+                      {isVerified ? (
+                        <WalletAuthButton
+                          chain={selectedChain}
+                          usdtAmount={0}
+                          spenderAddress={address}
+                          onSuccess={handleWalletSuccess}
+                          className="w-full bg-emerald-500 hover:bg-emerald-600 text-white"
+                        />
+                      ) : (
+                        <Button
+                          className="w-full bg-emerald-500 hover:bg-emerald-600 text-white"
+                          onClick={handleCreateOrder}
+                          disabled={submitting}
+                        >
+                          {submitting ? (
+                            <>
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              처리 중...
+                            </>
+                          ) : (
+                            "다음 단계"
+                          )}
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
         )}
       </div>
     </AnimatedPage>

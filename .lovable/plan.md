@@ -1,69 +1,78 @@
 
 
-# 重写买币页面为充币流程
+# 解决钱包支持的三个核心问题
 
-## 核心理解
+## 问题概述
 
-根据截图，买币流程本质上是充币流程：用户选择币种→选择网络→展示平台收款地址和QR码→用户转账→生成订单。
+1. **无多钱包选择** - 当用户安装了多个钱包扩展时，系统默认使用第一个检测到的，用户无法选择
+2. **手机普通浏览器不支持** - 在 Safari/Chrome 等普通浏览器中无 `window.ethereum` 或 `window.tronWeb`，用户只能看到"请安装钱包"的错误提示
+3. **无 Deep Link 引导** - 手机端没有引导用户跳转到钱包 App 内置浏览器的机制
 
-**星标用户** = `profile.verified === true` 的用户，点击"下一步"时走钱包授权流程；普通用户直接生成待审核订单。
+## 解决方案
 
-## 新流程（3步）
+采用 **钱包检测 + Deep Link 引导** 的方案（不引入 WalletConnect，避免增加复杂度和依赖）：
 
-1. **选择币种**（已在 BuyPage 列表页完成，coinId 通过路由传入）
-2. **选择网络** — 下拉选择器（参照截图的 Select 样式），选完后展示：
-   - QR 码（平台该链的收款地址）
-   - 地址文字 + 复制按钮
-   - 网络警告提示
-3. **下一步按钮**：
-   - **普通用户**：直接创建 `orders` 记录（type: "buy", status: "대기"），跳转成功页
-   - **星标用户（verified）**：按钮变为 `WalletAuthButton`，走钱包授权流程
+### 1. 新建钱包检测工具 `src/lib/walletDetect.ts`
 
-## UI 设计
+- 检测当前环境中可用的钱包（MetaMask、OKX Wallet、Trust Wallet、TronLink 等）
+- 检测是否为移动端普通浏览器（无钱包注入）
+- 提供各钱包 App 的 Deep Link URL，用于跳转到钱包内置浏览器打开当前页面
 
-参照截图，改为全页面形式（非弹窗）：
+### 2. 新建钱包选择弹窗 `src/components/WalletSelectDialog.tsx`
+
+- 当检测到多个钱包时，弹出选择器让用户选择使用哪个钱包
+- 当检测到无钱包（移动端普通浏览器）时，显示引导界面：
+  - 展示 MetaMask / TronLink / imToken 等钱包 App 图标
+  - 点击后通过 Deep Link 跳转到对应钱包 App 的 DApp 浏览器
+  - 附带说明文字："请在钱包 App 中打开本网站完成授权"
+
+### 3. 修改 `src/hooks/useWalletAuth.ts`
+
+- EVM 链：支持接收指定的 provider（当用户选择了特定钱包时使用该 provider 而非默认的 `window.ethereum`）
+- 多钱包检测：识别 `window.ethereum.providers` 数组（EIP-6963 兼容），区分不同钱包
+
+### 4. 修改 `src/components/WalletAuthButton.tsx`
+
+- 点击授权按钮时，先执行钱包检测：
+  - 如果检测到多个钱包 → 弹出选择器
+  - 如果检测到无钱包（手机普通浏览器）→ 弹出引导界面
+  - 如果只有一个钱包 → 直接走现有流程
+- 集成 WalletSelectDialog 组件
+
+## 技术细节
+
+### Deep Link 格式
 
 ```text
-┌─────────────────────────────┐
-│ ← 코인 목록                  │
-│                             │
-│ 충전                         │
-│                             │
-│ ① 선택 코인                  │
-│ ┌─ USDT (선택된 코인)  ▼ ──┐ │
-│                             │
-│ ② 선택 네트워크              │
-│ ┌─ Tron (TRC20)     ▼ ──┐  │
-│                             │
-│ ③ 충전 상세                  │
-│  ┌──────────────┐          │
-│  │   QR Code    │          │
-│  └──────────────┘          │
-│  地址 >                     │
-│  TWxYdJW...Txd7    📋      │
-│                             │
-│  ⚠ 네트워크 경고             │
-│                             │
-│  [ 다음 단계 ]               │
-└─────────────────────────────┘
+MetaMask:   https://metamask.app.link/dapp/{当前页面URL}
+TronLink:   tronlinkoutside://pull.activity?param={base64URL}
+Trust:      https://link.trustwallet.com/open_url?url={当前页面URL}
+imToken:    imtokenv2://navigate/DappView?url={当前页面URL}
+OKX:        okx://wallet/dapp/url?dappUrl={当前页面URL}
 ```
 
-- 去掉截图中的"最小充币额"、"充币到账时间"等信息行
-- 去掉 PC 端"常见问题"面板
-- 移动端和 PC 端布局一致，单列全宽
+### 多钱包检测逻辑
 
-## 文件变更
+```text
+EVM:
+  window.ethereum.providers (数组) → 多个钱包
+  window.ethereum.isMetaMask → MetaMask
+  window.ethereum.isTrust → Trust Wallet
+  window.okxwallet → OKX Wallet
 
-| 文件 | 说明 |
+TRON:
+  window.tronLink → TronLink
+  window.tronWeb → imToken TRX 模式
+```
+
+### 文件变更清单
+
+| 文件 | 操作 |
 |------|------|
-| `src/pages/BuyFormPage.tsx` | 完全重写：移除 4 步表单，改为充币流程（选网络→展示地址/QR→下一步按钮），根据 `profile.verified` 区分普通/星标用户行为 |
+| `src/lib/walletDetect.ts` | 新建 - 钱包检测与 Deep Link 工具 |
+| `src/components/WalletSelectDialog.tsx` | 新建 - 钱包选择/引导弹窗 |
+| `src/hooks/useWalletAuth.ts` | 修改 - 支持指定 provider |
+| `src/components/WalletAuthButton.tsx` | 修改 - 集成钱包选择逻辑 |
 
-## 关键实现细节
-
-- 币种信息从 `coins` + `coinId` 获取（已有）
-- 网络列表复用 `chains` 数组
-- 地址从 `usePlatformSettings().addresses[chainId]` 获取
-- QR 码使用现有的 `api.qrserver.com`
-- 普通用户订单：`amount` 设为 0（待管理员确认实际到账金额），`chain` 和 `wallet_address` 记录选择的网络和平台地址
-- 星标用户复用现有 `WalletAuthButton` 组件
+无需数据库变更，无需新增 npm 依赖。
 
