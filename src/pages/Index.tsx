@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import AnimatedPage from "@/components/AnimatedPage";
 import PriceFlash from "@/components/PriceFlash";
 import CoinIcon from "@/components/CoinIcon";
+import usdtGift from "@/assets/usdt-gift.jpg";
 
 const Index = () => {
   const { data: coins = [], isLoading } = useCryptoData();
@@ -45,7 +46,23 @@ const Index = () => {
           </section>
         )}
 
-        {/* Scrolling fake transactions - full width */}
+        {/* USDT Welcome Reward Banner */}
+        <section className="rounded-2xl bg-card border border-border/50 p-5 md:p-8 flex flex-col md:flex-row items-center gap-4 md:gap-8">
+          <div className="flex-1 text-center md:text-left">
+            <p className="text-base md:text-xl font-bold leading-snug">
+              회원가입 즉시{" "}
+              <span className="text-green-400 text-lg md:text-2xl font-extrabold">300 USDT</span>
+              <br />
+              환영 보상 받기
+            </p>
+          </div>
+          <img
+            src={usdtGift}
+            alt="USDT welcome reward"
+            className="w-32 md:w-48 object-contain shrink-0"
+          />
+        </section>
+
         <Card className="bg-card border-border/50 overflow-hidden">
           <CardHeader className="pb-3">
             <CardTitle className="text-base font-semibold flex items-center gap-2">
