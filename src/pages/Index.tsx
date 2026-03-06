@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import AnimatedPage from "@/components/AnimatedPage";
 import PriceFlash from "@/components/PriceFlash";
 import CoinIcon from "@/components/CoinIcon";
+import usdtGift from "@/assets/usdt-gift.jpg";
 
 const Index = () => {
   const { data: coins = [], isLoading } = useCryptoData();
