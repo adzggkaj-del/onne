@@ -124,8 +124,8 @@ const LendingFormPage = () => {
 
         {confirmed ? (
           <div className="text-center space-y-3 py-6">
-            <div className="flex h-16 w-16 mx-auto items-center justify-center rounded-full bg-emerald-500/20">
-              <Check className="h-8 w-8 text-emerald-500" />
+            <div className="flex h-16 w-16 mx-auto items-center justify-center rounded-full bg-primary/20">
+              <Check className="h-8 w-8 text-primary" />
             </div>
             <p className="font-semibold">대출 신청이 완료되었습니다!</p>
             <p className="text-sm text-muted-foreground">
