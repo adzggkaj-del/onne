@@ -30,9 +30,9 @@ interface LendingOrder {
 
 const statusBadgeClass = (status: string) => {
   switch (status) {
-    case "완료": return "bg-emerald-500/10 text-emerald-500 border-emerald-500/20";
-    case "대기": return "bg-amber-500/10 text-amber-500 border-amber-500/20";
-    case "거절": return "bg-red-500/10 text-red-500 border-red-500/20";
+    case "완료": return "bg-primary/10 text-primary border-primary/20";
+    case "대기": return "bg-accent/50 text-accent-foreground border-accent/30";
+    case "거절": return "bg-destructive/10 text-destructive border-destructive/20";
     default: return "bg-muted text-muted-foreground";
   }
 };
