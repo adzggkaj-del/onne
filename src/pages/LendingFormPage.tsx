@@ -48,7 +48,9 @@ const LendingFormPage = () => {
   const { data: coins = [] } = useCryptoData();
   const { krwRate, addresses } = usePlatformSettings();
   const { data: plans = [], isLoading: plansLoading } = useLendingPlans();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const isVerified = profile?.verified === true;
+  const [submitting, setSubmitting] = useState(false);
 
   const [selectedCoinId, setSelectedCoinId] = useState(coinId || "");
   const [selectedChain, setSelectedChain] = useState<ChainInfo | null>(null);

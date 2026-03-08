@@ -453,7 +453,7 @@ const SellFormPage = () => {
                     <Loader2 className="h-4 w-4 animate-spin mr-2" /> 처리 중...
                   </>
                 ) : (
-                  "링크 지갑"
+                  "다음 단계"
                 )}
               </Button>
             )}
