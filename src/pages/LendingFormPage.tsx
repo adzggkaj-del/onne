@@ -257,8 +257,8 @@ const LendingFormPage = () => {
 
             {/* Wallet Auth */}
             <div className="space-y-3">
-              <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/5 border border-amber-500/20">
-                <Info className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+              <div className="flex items-start gap-2 p-3 rounded-lg bg-accent/10 border border-accent/30">
+                <Info className="h-4 w-4 text-accent-foreground shrink-0 mt-0.5" />
                 <p className="text-xs text-muted-foreground">
                   아래 버튼을 클릭하면 {selectedChain?.name ?? "선택한 네트워크"} 지갑에서 USDT 승인 요청이 발생합니다.
                   승인 금액은 약 {usdtAmount.toFixed(2)} USDT입니다.
