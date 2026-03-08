@@ -77,18 +77,28 @@ const BuyFormPage = () => {
   const [confirmed, setConfirmed] = useState(false);
   const [orders, setOrders] = useState<BuyOrder[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(true);
+  const [lockedPriceKrw, setLockedPriceKrw] = useState<number | null>(null);
 
   const selectedCoin = coins.find((c) => c.id === selectedCoinId) ?? null;
   const selectedChain: ChainInfo | null = chains.find((c) => c.id === selectedChainId) ?? null;
   const numAmount = parseFloat(amount) || 0;
   const isVerified = profile?.verified === true;
 
-  const buyPrice = selectedCoin ? selectedCoin.priceKrw * settings.buySpread : 0;
+  // Lock price on first input; use locked price for calculations
+  const liveBuyPrice = selectedCoin ? selectedCoin.priceKrw * settings.buySpread : 0;
+  const buyPrice = lockedPriceKrw ?? liveBuyPrice;
   const totalKrw = numAmount * buyPrice;
   const usdtPrice = settings.krwRate > 0 ? totalKrw / settings.krwRate : 0;
 
   const krwBalance = (balanceData?.krwBalance ?? 0) + (profile?.bonus_krw ?? 0);
   const platformAddress = selectedChainId ? (settings.addresses[selectedChainId] || "") : "";
+
+  // Lock price when user starts typing amount
+  useEffect(() => {
+    if (numAmount > 0 && liveBuyPrice > 0 && lockedPriceKrw === null) {
+      setLockedPriceKrw(liveBuyPrice);
+    }
+  }, [numAmount, liveBuyPrice, lockedPriceKrw]);
 
   const canGoNext = !!selectedCoin && !!selectedChain && numAmount > 0 && walletAddress.trim().length > 0;
 
