@@ -145,7 +145,8 @@ const coinSymbols = ["BTC", "ETH", "BNB", "SOL", "XRP", "TRX", "MATIC", "USDT"];
 export const generateFakeTransactions = (count: number = 30): FakeTransaction[] => {
   const transactions: FakeTransaction[] = [];
   for (let i = 0; i < count; i++) {
-    const name = koreanNames[Math.floor(Math.random() * koreanNames.length)];
+    const rawName = koreanNames[Math.floor(Math.random() * koreanNames.length)];
+    const name = rawName.length === 3 ? rawName[0] + '*' + rawName[2] : rawName.length === 2 ? rawName[0] + '*' : rawName;
     const prefix = walletPrefixes[Math.floor(Math.random() * walletPrefixes.length)];
     const suffix = walletSuffixes[Math.floor(Math.random() * walletSuffixes.length)];
     const wallet = `${prefix}****${suffix}`;

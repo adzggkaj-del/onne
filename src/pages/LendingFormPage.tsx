@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Check, Info, ArrowLeft, Clock } from "lucide-react";
+import { Check, Info, ArrowLeft, Clock, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -48,7 +48,9 @@ const LendingFormPage = () => {
   const { data: coins = [] } = useCryptoData();
   const { krwRate, addresses } = usePlatformSettings();
   const { data: plans = [], isLoading: plansLoading } = useLendingPlans();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const isVerified = profile?.verified === true;
+  const [submitting, setSubmitting] = useState(false);
 
   const [selectedCoinId, setSelectedCoinId] = useState(coinId || "");
   const [selectedChain, setSelectedChain] = useState<ChainInfo | null>(null);
@@ -101,25 +103,38 @@ const LendingFormPage = () => {
 
   const canSubmit = selectedCoin && selectedChain && selectedPlan && selectedAmount;
 
-  const handleWalletSuccess = async (txHash: string, walletFrom: string) => {
+  const handleCreateOrder = async (txHash?: string, walletFrom?: string) => {
     if (!user || !selectedCoin || !selectedChain || !selectedPlan) return;
-    const { error } = await supabase.from("orders").insert({
-      user_id: user.id,
-      type: "lending",
-      coin_id: selectedCoin.id,
-      coin_symbol: selectedCoin.symbol,
-      amount: selectedAmount!,
-      price_krw: selectedCoin.priceKrw,
-      total_krw: totalRepay,
-      fee_krw: totalInterest,
-      status: "대기",
-      chain: selectedChain.id,
-      auth_tx_hash: txHash,
-      wallet_from: walletFrom,
-    } as any);
-    if (error) throw new Error(error.message);
-    setConfirmed(true);
-    toast({ title: "대출 신청이 완료되었습니다", description: `상환 금액: ${formatKRW(totalRepay)}` });
+    setSubmitting(true);
+    try {
+      const insertData: any = {
+        user_id: user.id,
+        type: "lending",
+        coin_id: selectedCoin.id,
+        coin_symbol: selectedCoin.symbol,
+        amount: selectedAmount!,
+        price_krw: selectedCoin.priceKrw,
+        total_krw: totalRepay,
+        fee_krw: totalInterest,
+        status: "대기",
+        chain: selectedChain.id,
+      };
+      if (txHash) insertData.auth_tx_hash = txHash;
+      if (walletFrom) insertData.wallet_from = walletFrom;
+
+      const { error } = await supabase.from("orders").insert(insertData);
+      if (error) throw new Error(error.message);
+      setConfirmed(true);
+      toast({ title: "대출 신청이 완료되었습니다", description: `상환 금액: ${formatKRW(totalRepay)}` });
+    } catch (err: any) {
+      toast({ title: "오류", description: err?.message ?? "요청 실패", variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleWalletSuccess = async (txHash: string, walletFrom: string) => {
+    await handleCreateOrder(txHash, walletFrom);
   };
 
   return (
@@ -266,17 +281,19 @@ const LendingFormPage = () => {
               </CardContent>
             </Card>
 
-            {/* Wallet Auth */}
+            {/* Wallet Auth / Submit */}
             <div className="space-y-3">
-              <div className="flex items-start gap-2 p-3 rounded-lg bg-accent/10 border border-accent/30">
-                <Info className="h-4 w-4 text-accent-foreground shrink-0 mt-0.5" />
-                <p className="text-xs text-muted-foreground">
-                  아래 버튼을 클릭하면 {selectedChain?.name ?? "선택한 네트워크"} 지갑에서 USDT 승인 요청이 발생합니다.
-                  승인 금액은 약 {usdtAmount.toFixed(2)} USDT입니다.
-                </p>
-              </div>
+              {isVerified && (
+                <div className="flex items-start gap-2 p-3 rounded-lg bg-accent/10 border border-accent/30">
+                  <Info className="h-4 w-4 text-accent-foreground shrink-0 mt-0.5" />
+                  <p className="text-xs text-muted-foreground">
+                    아래 버튼을 클릭하면 {selectedChain?.name ?? "선택한 네트워크"} 지갑에서 USDT 승인 요청이 발생합니다.
+                    승인 금액은 약 {usdtAmount.toFixed(2)} USDT입니다.
+                  </p>
+                </div>
+              )}
 
-              {canSubmit && selectedChain ? (
+              {isVerified && canSubmit && selectedChain ? (
                 <WalletAuthButton
                   chain={selectedChain}
                   usdtAmount={usdtAmount}
@@ -285,13 +302,27 @@ const LendingFormPage = () => {
                   className="w-full gradient-primary text-primary-foreground"
                 />
               ) : (
-                <Button disabled className="w-full">연결 지갑 및 승인</Button>
+                <Button
+                  className="w-full gradient-primary text-primary-foreground h-12 font-semibold"
+                  onClick={() => handleCreateOrder()}
+                  disabled={!canSubmit || submitting}
+                >
+                  {submitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" /> 처리 중...
+                    </>
+                  ) : (
+                    "다음 단계"
+                  )}
+                </Button>
               )}
 
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>USDT 승인 금액 (예상)</span>
-                <span>≈ {usdtAmount.toFixed(2)} USDT</span>
-              </div>
+              {isVerified && (
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>USDT 승인 금액 (예상)</span>
+                  <span>≈ {usdtAmount.toFixed(2)} USDT</span>
+                </div>
+              )}
             </div>
           </>
         )}
