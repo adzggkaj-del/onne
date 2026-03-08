@@ -174,6 +174,7 @@ const SellFormPage = () => {
     setAccountHolder("");
     setAccountNumber("");
     setConfirmed(false);
+    setLockedPriceKrw(null);
   };
 
   // History section (shared between steps)

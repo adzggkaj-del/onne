@@ -181,6 +181,7 @@ const BuyFormPage = () => {
     setWalletAddress("");
     setPaymentMethod("crypto");
     setConfirmed(false);
+    setLockedPriceKrw(null);
   };
 
   // History section (shared between steps)
