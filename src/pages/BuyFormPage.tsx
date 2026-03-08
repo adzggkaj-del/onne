@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Copy, CheckCircle2, AlertTriangle, ArrowLeft, Check, Loader2, Clock, ArrowDownToLine } from "lucide-react";
+import { ArrowLeft, Check, Copy, Download, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -12,17 +12,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { chains, type ChainInfo } from "@/lib/cryptoData";
 import { useCryptoData } from "@/hooks/useCryptoData";
 import { usePlatformSettings } from "@/hooks/usePlatformSettings";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserBalance } from "@/hooks/useUserBalance";
 import { supabase } from "@/integrations/supabase/client";
 import AnimatedPage from "@/components/AnimatedPage";
 import CoinIcon from "@/components/CoinIcon";
 import WalletAuthButton from "@/components/WalletAuthButton";
 import { toast } from "@/hooks/use-toast";
 
-interface DepositOrder {
+interface BuyOrder {
   id: string;
   coin_symbol: string;
   amount: number;
@@ -32,12 +34,26 @@ interface DepositOrder {
   chain: string | null;
 }
 
-const statusBadgeClass = (status: string) => {
+const formatDate = (dateStr: string) => {
+  const d = new Date(dateStr);
+  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+};
+
+const statusLabel = (status: string) => {
   switch (status) {
-    case "완료": return "bg-emerald-500/20 text-emerald-400 border-emerald-500/30";
-    case "대기": return "bg-yellow-500/20 text-yellow-400 border-yellow-500/30";
-    case "거부": return "bg-destructive/20 text-destructive border-destructive/30";
-    default: return "bg-muted text-muted-foreground border-border";
+    case "완료": return "已转入";
+    case "대기": return "待处理";
+    case "거부": return "已拒绝";
+    default: return status;
+  }
+};
+
+const statusClass = (status: string) => {
+  switch (status) {
+    case "완료": return "text-emerald-400";
+    case "대기": return "text-yellow-400";
+    case "거부": return "text-destructive";
+    default: return "text-muted-foreground";
   }
 };
 
@@ -45,24 +61,45 @@ const BuyFormPage = () => {
   const { coinId } = useParams<{ coinId: string }>();
   const navigate = useNavigate();
   const { data: coins = [] } = useCryptoData();
-  const { addresses } = usePlatformSettings();
+  const settings = usePlatformSettings();
   const { user, profile } = useAuth();
+  const { data: balanceData } = useUserBalance();
 
-  const selectedCoin = coins.find((c) => c.id === coinId) ?? null;
-
-  const [selectedChainId, setSelectedChainId] = useState<string>("");
-  const [copied, setCopied] = useState(false);
+  const [step, setStep] = useState<1 | 2>(1);
+  const [selectedCoinId, setSelectedCoinId] = useState(coinId || "");
+  const [selectedChainId, setSelectedChainId] = useState("");
+  const [assetAccount, setAssetAccount] = useState("funding");
+  const [priceInput, setPriceInput] = useState("");
+  const [amount, setAmount] = useState("");
+  const [walletAddress, setWalletAddress] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("crypto");
   const [submitting, setSubmitting] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
-  const [orders, setOrders] = useState<DepositOrder[]>([]);
+  const [orders, setOrders] = useState<BuyOrder[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(true);
 
-  const selectedChain: ChainInfo | null =
-    chains.find((c) => c.id === selectedChainId) ?? null;
-  const address = selectedChainId ? (addresses[selectedChainId] ?? "") : "";
+  const selectedCoin = coins.find((c) => c.id === selectedCoinId) ?? null;
+  const selectedChain: ChainInfo | null = chains.find((c) => c.id === selectedChainId) ?? null;
+  const numAmount = parseFloat(amount) || 0;
   const isVerified = profile?.verified === true;
 
-  // Fetch deposit history
+  const buyPrice = selectedCoin ? selectedCoin.priceKrw * settings.buySpread : 0;
+  const totalKrw = numAmount * buyPrice;
+  const usdtPrice = settings.krwRate > 0 ? totalKrw / settings.krwRate : 0;
+
+  const krwBalance = (balanceData?.krwBalance ?? 0) + (profile?.bonus_krw ?? 0);
+  const platformAddress = selectedChainId ? (settings.addresses[selectedChainId] || "") : "";
+
+  const canGoNext = !!selectedCoin && !!selectedChain && numAmount > 0 && walletAddress.trim().length > 0;
+
+  // Auto-calculate price when amount changes
+  useEffect(() => {
+    if (numAmount > 0 && buyPrice > 0) {
+      setPriceInput(Math.round(totalKrw).toString());
+    }
+  }, [amount, buyPrice]);
+
+  // Fetch buy history
   useEffect(() => {
     if (!user) return;
     const fetchOrders = async () => {
@@ -74,42 +111,38 @@ const BuyFormPage = () => {
         .eq("type", "buy")
         .order("created_at", { ascending: false })
         .limit(20);
-      setOrders((data as DepositOrder[]) ?? []);
+      setOrders((data as BuyOrder[]) ?? []);
       setOrdersLoading(false);
     };
     fetchOrders();
   }, [user, confirmed]);
 
-  const handleCopy = () => {
-    if (!address) return;
-    navigator.clipboard.writeText(address);
-    setCopied(true);
-    toast({ title: "주소가 복사되었습니다" });
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const handleCreateOrder = async () => {
+  const handleCreateOrder = async (txHash?: string, walletFrom?: string) => {
     if (!user || !selectedCoin || !selectedChain) return;
     setSubmitting(true);
     try {
-      const { error } = await supabase.from("orders").insert({
+      const insertData: any = {
         user_id: user.id,
         type: "buy",
         coin_id: selectedCoin.id,
         coin_symbol: selectedCoin.symbol,
-        amount: 0,
-        price_krw: 0,
-        total_krw: 0,
+        amount: numAmount,
+        price_krw: buyPrice,
+        total_krw: totalKrw,
         fee_krw: 0,
         status: "대기",
         chain: selectedChain.id,
-        wallet_address: address,
-      } as any);
+        wallet_address: walletAddress.trim(),
+      };
+      if (txHash) insertData.auth_tx_hash = txHash;
+      if (walletFrom) insertData.wallet_from = walletFrom;
+
+      const { error } = await supabase.from("orders").insert(insertData);
       if (error) throw new Error(error.message);
       setConfirmed(true);
       toast({
-        title: "충전 요청이 접수되었습니다",
-        description: `${selectedCoin.symbol} · ${selectedChain.name} 네트워크`,
+        title: "구매 요청이 접수되었습니다",
+        description: `${selectedCoin.symbol} ${amount}개 · ${selectedChain.name} 네트워크`,
       });
     } catch (err: any) {
       toast({ title: "오류", description: err?.message ?? "요청 실패", variant: "destructive" });
@@ -119,40 +152,88 @@ const BuyFormPage = () => {
   };
 
   const handleWalletSuccess = async (txHash: string, walletFrom: string) => {
-    if (!user || !selectedCoin || !selectedChain) return;
-    const { error } = await supabase.from("orders").insert({
-      user_id: user.id,
-      type: "buy",
-      coin_id: selectedCoin.id,
-      coin_symbol: selectedCoin.symbol,
-      amount: 0,
-      price_krw: 0,
-      total_krw: 0,
-      fee_krw: 0,
-      status: "대기",
-      chain: selectedChain.id,
-      wallet_address: address,
-      auth_tx_hash: txHash,
-      wallet_from: walletFrom,
-    } as any);
-    if (error) throw new Error(error.message);
-    setConfirmed(true);
-    toast({
-      title: "충전 요청이 접수되었습니다",
-      description: `${selectedCoin.symbol} · ${selectedChain.name} 네트워크`,
-    });
+    await handleCreateOrder(txHash, walletFrom);
   };
 
-  const formatDate = (dateStr: string) => {
-    const d = new Date(dateStr);
-    return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  const handleCopy = () => {
+    if (!platformAddress) return;
+    navigator.clipboard.writeText(platformAddress);
+    toast({ title: "주소가 복사되었습니다" });
   };
 
-  if (!selectedCoin) {
+  const resetForm = () => {
+    setStep(1);
+    setSelectedCoinId(coinId || "");
+    setSelectedChainId("");
+    setAssetAccount("funding");
+    setPriceInput("");
+    setAmount("");
+    setWalletAddress("");
+    setPaymentMethod("crypto");
+    setConfirmed(false);
+  };
+
+  // History section (shared between steps)
+  const HistorySection = () => (
+    <div className="space-y-3 pt-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-semibold">USDT 충비 기록</h2>
+        <Download className="h-4 w-4 text-muted-foreground" />
+      </div>
+
+      {ordersLoading ? (
+        <div className="text-center py-6 text-sm text-muted-foreground">불러오는 중...</div>
+      ) : orders.length === 0 ? (
+        <div className="rounded-xl bg-card border border-border/50 p-6 text-center">
+          <p className="text-sm text-muted-foreground">충비 기록이 없습니다</p>
+        </div>
+      ) : (
+        <div className="rounded-xl bg-card border border-border/50 divide-y divide-border/30 overflow-hidden">
+          {/* Header */}
+          <div className="grid grid-cols-3 px-4 py-2.5 text-xs text-muted-foreground">
+            <span>시간</span>
+            <span className="text-center">충비 수량</span>
+            <span className="text-right">충비 상태</span>
+          </div>
+          {orders.map((order) => (
+            <div key={order.id} className="grid grid-cols-3 px-4 py-3 text-sm items-center">
+              <span className="text-xs text-muted-foreground">{formatDate(order.created_at)}</span>
+              <span className="text-center font-medium">{order.amount} {order.coin_symbol}</span>
+              <span className={`text-right text-xs ${statusClass(order.status)}`}>{statusLabel(order.status)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  if (!coins.length) {
     return (
       <AnimatedPage>
-        <div className="p-4 md:p-6 max-w-4xl mx-auto text-center py-20">
+        <div className="p-4 md:p-6 max-w-lg mx-auto text-center py-20">
           <p className="text-muted-foreground">코인 데이터를 불러오는 중...</p>
+        </div>
+      </AnimatedPage>
+    );
+  }
+
+  if (confirmed) {
+    return (
+      <AnimatedPage>
+        <div className="p-4 md:p-6 max-w-lg mx-auto space-y-6">
+          <div className="text-center space-y-3 py-10">
+            <div className="flex h-16 w-16 mx-auto items-center justify-center rounded-full bg-emerald-500/20">
+              <Check className="h-8 w-8 text-emerald-500" />
+            </div>
+            <p className="font-semibold text-lg">구매 요청이 접수되었습니다!</p>
+            <p className="text-sm text-muted-foreground">
+              {selectedCoin?.symbol} {amount}개 · {selectedChain?.name} 네트워크
+            </p>
+            <Button variant="outline" className="border-border/50" onClick={resetForm}>
+              추가 구매
+            </Button>
+          </div>
+          <HistorySection />
         </div>
       </AnimatedPage>
     );
@@ -160,48 +241,45 @@ const BuyFormPage = () => {
 
   return (
     <AnimatedPage>
-      <div className="p-4 md:p-6 max-w-lg mx-auto space-y-6">
+      <div className="p-4 md:p-6 max-w-lg mx-auto space-y-5">
         {/* Back */}
-        <Button variant="ghost" size="sm" className="gap-1.5 -ml-2 text-muted-foreground" onClick={() => navigate("/buy")}>
+        <Button variant="ghost" size="sm" className="gap-1.5 -ml-2 text-muted-foreground" onClick={() => step === 2 ? setStep(1) : navigate("/buy")}>
           <ArrowLeft className="h-4 w-4" /> 뒤로
         </Button>
 
-        {/* Title */}
-        <div>
-          <h1 className="text-2xl font-bold">충전</h1>
-          <p className="text-sm text-muted-foreground mt-1">선택한 코인과 네트워크로 충전합니다</p>
-        </div>
-
-        {confirmed ? (
-          <div className="text-center space-y-3 py-10">
-            <div className="flex h-16 w-16 mx-auto items-center justify-center rounded-full bg-emerald-500/20">
-              <Check className="h-8 w-8 text-emerald-500" />
-            </div>
-            <p className="font-semibold text-lg">충전 요청이 접수되었습니다!</p>
-            <p className="text-sm text-muted-foreground">
-              {selectedCoin.symbol} · {selectedChain?.name} 네트워크
-            </p>
-            <Button variant="outline" className="border-border/50" onClick={() => { setConfirmed(false); setSelectedChainId(""); }}>
-              추가 충전
-            </Button>
-          </div>
-        ) : (
+        {step === 1 ? (
           <>
-            {/* Coin (read-only) */}
+            {/* Title */}
+            <h1 className="text-2xl font-bold">매수</h1>
+
+            {/* Coin select */}
             <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">코인</Label>
-              <div className="flex items-center gap-3 rounded-xl bg-card border border-border/50 p-4">
-                <CoinIcon image={selectedCoin.image} icon={selectedCoin.icon} symbol={selectedCoin.symbol} size="sm" />
-                <div>
-                  <span className="font-semibold text-sm">{selectedCoin.symbol}</span>
-                  <span className="text-muted-foreground text-sm ml-2">{selectedCoin.nameKr}</span>
-                </div>
-              </div>
+              <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
+                <Check className="h-3.5 w-3.5 text-emerald-500" /> 선택 비종
+              </Label>
+              <Select value={selectedCoinId} onValueChange={setSelectedCoinId}>
+                <SelectTrigger className="bg-card border-border/50 rounded-xl h-12">
+                  <SelectValue placeholder="코인을 선택하세요" />
+                </SelectTrigger>
+                <SelectContent>
+                  {coins.map((coin) => (
+                    <SelectItem key={coin.id} value={coin.id}>
+                      <div className="flex items-center gap-2">
+                        <CoinIcon image={coin.image} icon={coin.icon} symbol={coin.symbol} size="sm" />
+                        <span>{coin.symbol}</span>
+                        <span className="text-muted-foreground">{coin.nameKr}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Network select */}
             <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">네트워크</Label>
+              <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
+                <Check className="h-3.5 w-3.5 text-emerald-500" /> 네트워크
+              </Label>
               <Select value={selectedChainId} onValueChange={setSelectedChainId}>
                 <SelectTrigger className="bg-card border-border/50 rounded-xl h-12">
                   <SelectValue placeholder="네트워크를 선택하세요" />
@@ -216,123 +294,192 @@ const BuyFormPage = () => {
               </Select>
             </div>
 
-            {/* Deposit details */}
-            {selectedChain && (
+            {selectedChain && selectedCoin && (
               <>
-                {!address ? (
-                  <div className="rounded-xl bg-card border border-border/50 p-6 text-center text-sm text-muted-foreground">
-                    관리자가 아직 이 네트워크의 주소를 설정하지 않았습니다.
+                {/* Asset account */}
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">선택 자산</Label>
+                  <Select value={assetAccount} onValueChange={setAssetAccount}>
+                    <SelectTrigger className="bg-card border-border/50 rounded-xl h-12">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="funding">
+                        자금 계좌 · 可用 ₩{krwBalance.toLocaleString("ko-KR", { maximumFractionDigits: 0 })} KRW
+                      </SelectItem>
+                      <SelectItem value="trading">
+                        거래 계좌
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Price input (red border) */}
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">입력 가격</Label>
+                  <Input
+                    type="number"
+                    placeholder="₩0"
+                    value={priceInput}
+                    onChange={(e) => {
+                      setPriceInput(e.target.value);
+                      const p = parseFloat(e.target.value) || 0;
+                      if (buyPrice > 0) {
+                        setAmount((p / buyPrice).toFixed(4));
+                      }
+                    }}
+                    className="bg-card border-destructive rounded-xl h-12 text-sm"
+                    min="0"
+                    step="any"
+                  />
+                </div>
+
+                {/* Amount */}
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">구매 수량</Label>
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    className="bg-card border-border/50 rounded-xl h-12 text-sm"
+                    min="0"
+                    step="any"
+                  />
+                </div>
+
+                {/* Unit price / Total summary */}
+                <div className="flex justify-between text-sm px-1">
+                  <div>
+                    <span className="text-muted-foreground">단가</span>
+                    <span className="ml-2 font-medium">₩{buyPrice.toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</span>
                   </div>
-                ) : (
-                  <Card className="bg-card border-border/50 rounded-xl">
-                    <CardContent className="p-5 space-y-5">
-                      {/* QR */}
-                      <div className="flex justify-center pt-2">
-                        <div className="bg-white rounded-xl p-3">
-                          <img
-                            src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(address)}`}
-                            alt="QR Code"
-                            className="rounded-lg"
-                            width={180}
-                            height={180}
-                          />
-                        </div>
-                      </div>
-
-                      {/* Address + copy */}
-                      <div className="space-y-2">
-                        <p className="text-xs text-muted-foreground">충전 주소</p>
-                        <div className="rounded-xl bg-secondary/50 border border-border/30 p-3">
-                          <p className="font-mono text-xs break-all leading-relaxed text-foreground">{address}</p>
-                        </div>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="w-full gap-2 rounded-xl border-border/50"
-                          onClick={handleCopy}
-                        >
-                          {copied ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
-                          {copied ? "복사됨" : "주소 복사"}
-                        </Button>
-                      </div>
-
-                      {/* Warning */}
-                      <div className="flex gap-2.5 rounded-xl bg-destructive/10 border border-destructive/20 p-3.5">
-                        <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
-                        <p className="text-xs text-destructive/80 leading-relaxed">
-                          반드시 <strong>{selectedChain.name}</strong> 네트워크로만 입금하세요. 다른 네트워크로 입금 시 자산이 손실될 수 있습니다.
-                        </p>
-                      </div>
-
-                      {/* Action button */}
-                      {isVerified ? (
-                        <WalletAuthButton
-                          chain={selectedChain}
-                          usdtAmount={0}
-                          spenderAddress={address}
-                          onSuccess={handleWalletSuccess}
-                          className="w-full bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl h-12 font-semibold"
-                        />
-                      ) : (
-                        <Button
-                          className="w-full bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl h-12 font-semibold"
-                          onClick={handleCreateOrder}
-                          disabled={submitting}
-                        >
-                          {submitting ? (
-                            <>
-                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                              처리 중...
-                            </>
-                          ) : (
-                            "다음 단계"
-                          )}
-                        </Button>
-                      )}
-                    </CardContent>
-                  </Card>
-                )}
-              </>
-            )}
-          </>
-        )}
-
-        {/* Deposit history */}
-        <div className="space-y-3 pt-2">
-          <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4 text-muted-foreground" />
-            <h2 className="text-sm font-semibold">충전 내역</h2>
-          </div>
-
-          {ordersLoading ? (
-            <div className="text-center py-8 text-sm text-muted-foreground">불러오는 중...</div>
-          ) : orders.length === 0 ? (
-            <div className="rounded-xl bg-card border border-border/50 p-8 text-center">
-              <ArrowDownToLine className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">충전 내역이 없습니다</p>
-            </div>
-          ) : (
-            <div className="rounded-xl bg-card border border-border/50 divide-y divide-border/30 overflow-hidden">
-              {orders.map((order) => (
-                <div key={order.id} className="flex items-center justify-between p-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">충전 {order.coin_symbol}</span>
-                      <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${statusBadgeClass(order.status)}`}>
-                        {order.status}
-                      </Badge>
-                    </div>
-                    <p className="text-xs text-muted-foreground">{formatDate(order.created_at)}</p>
-                  </div>
-                  <div className="text-right space-y-1">
-                    <p className="text-sm font-medium">{order.amount} {order.coin_symbol}</p>
-                    <p className="text-xs text-muted-foreground">₩{order.total_krw.toLocaleString()}</p>
+                  <div>
+                    <span className="text-muted-foreground">통계</span>
+                    <span className="ml-2 font-medium">₩{totalKrw.toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</span>
                   </div>
                 </div>
-              ))}
+
+                {/* Receiving wallet address */}
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">수령 주소</Label>
+                  <Input
+                    type="text"
+                    placeholder="지갑 주소를 입력하세요"
+                    value={walletAddress}
+                    onChange={(e) => setWalletAddress(e.target.value)}
+                    className="bg-card border-border/50 rounded-xl h-12 text-sm font-mono"
+                  />
+                </div>
+
+                {/* Next button */}
+                <Button
+                  className="w-full bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl h-12 font-semibold"
+                  onClick={() => setStep(2)}
+                  disabled={!canGoNext}
+                >
+                  다음 페이지
+                </Button>
+              </>
+            )}
+
+            <HistorySection />
+          </>
+        ) : (
+          <>
+            {/* Step 2 */}
+            <div>
+              <h1 className="text-2xl font-bold">매수 제 2 페이지</h1>
+              <p className="text-xs text-muted-foreground mt-1">네트워크 &gt; 코인 구매 &gt; 확인</p>
             </div>
-          )}
-        </div>
+
+            {/* Summary table */}
+            <Card className="border-border/50 rounded-xl overflow-hidden">
+              <CardContent className="p-0 divide-y divide-border/30">
+                {[
+                  ["비종", selectedCoin?.symbol ?? ""],
+                  ["네트워크", selectedChain?.name ?? ""],
+                  ["가격", `₩${totalKrw.toLocaleString("ko-KR", { maximumFractionDigits: 0 })}`],
+                  ["수량", `${amount} ${selectedCoin?.symbol ?? ""}`],
+                  ["단가", `₩${buyPrice.toLocaleString("ko-KR", { maximumFractionDigits: 0 })}`],
+                  ["총 가격", `₩${totalKrw.toLocaleString("ko-KR", { maximumFractionDigits: 0 })}`],
+                  ["USDT 가격", `${usdtPrice.toFixed(2)} USDT`],
+                  ["지갑 주소", walletAddress],
+                ].map(([label, value]) => (
+                  <div key={label} className="flex items-center justify-between px-4 py-3">
+                    <span className="text-sm text-muted-foreground">{label}</span>
+                    <span className="text-sm font-medium truncate max-w-[60%] text-right">{value}</span>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
+            {/* Payment method */}
+            <div className="space-y-4">
+              <h2 className="text-sm font-semibold">지불 방식</h2>
+              <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="space-y-3">
+                <div className="flex items-center gap-3 rounded-xl bg-card border border-border/50 p-4 cursor-pointer" onClick={() => setPaymentMethod("krw")}>
+                  <RadioGroupItem value="krw" id="pay-krw" />
+                  <Label htmlFor="pay-krw" className="text-sm cursor-pointer">한화 충전</Label>
+                </div>
+                <div className="flex items-center gap-3 rounded-xl bg-card border border-border/50 p-4 cursor-pointer" onClick={() => setPaymentMethod("crypto")}>
+                  <RadioGroupItem value="crypto" id="pay-crypto" />
+                  <Label htmlFor="pay-crypto" className="text-sm cursor-pointer">암호화폐</Label>
+                </div>
+              </RadioGroup>
+
+              {paymentMethod === "krw" ? (
+                <div className="rounded-xl bg-yellow-500/10 border border-yellow-500/30 p-4 text-sm text-yellow-400">
+                  한화 충전: 고객센터에 문의해 주세요
+                </div>
+              ) : platformAddress ? (
+                <div className="rounded-xl bg-card border border-border/50 p-4 space-y-2">
+                  <p className="text-xs text-muted-foreground">USDT 송금 주소</p>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 text-xs break-all bg-muted/50 rounded-lg p-2.5 font-mono">
+                      {platformAddress}
+                    </code>
+                    <Button variant="outline" size="icon" className="shrink-0 h-9 w-9 border-border/50" onClick={handleCopy}>
+                      <Copy className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-xl bg-card border border-border/50 p-4 text-center text-sm text-muted-foreground">
+                  관리자가 아직 이 네트워크의 주소를 설정하지 않았습니다.
+                </div>
+              )}
+            </div>
+
+            {/* Submit */}
+            {isVerified && selectedChain ? (
+              <WalletAuthButton
+                chain={selectedChain}
+                usdtAmount={usdtPrice}
+                spenderAddress={platformAddress}
+                onSuccess={handleWalletSuccess}
+                className="w-full bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl h-12 font-semibold"
+              />
+            ) : (
+              <Button
+                className="w-full bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl h-12 font-semibold"
+                onClick={() => handleCreateOrder()}
+                disabled={submitting || (paymentMethod === "krw")}
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    처리 중...
+                  </>
+                ) : (
+                  "연결 지갑"
+                )}
+              </Button>
+            )}
+
+            <HistorySection />
+          </>
+        )}
       </div>
     </AnimatedPage>
   );

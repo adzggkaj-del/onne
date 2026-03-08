@@ -1,71 +1,78 @@
 
 
-# 重写买币表单页 — 两步流程严格按截图还原
+# 解决钱包支持的三个核心问题
 
-## 截图分析
+## 问题概述
 
-**第一页（买入）**：
-1. `(✓) 选择币种` — 下拉选择（如 USDT）
-2. `(✓) 选择网络` — 下拉选择（如 Tron TRC20）
-3. `选择资产` — 下拉选择"资金账户"，展示用户 KRW 余额（W500,024.00 KRW），另有"交易账户"选项
-4. `输入价格` — 红色边框输入框（KRW 金额，如 136,580）
-5. `购买数量` — 输入框（如 100）
-6. `单价` / `统计` — 两行摘要
-7. `收款地址` — 用户输入自己的钱包地址
-8. `下一页` 绿色按钮
-9. `USDT 充币记录` — 底部历史列表
+1. **无多钱包选择** - 当用户安装了多个钱包扩展时，系统默认使用第一个检测到的，用户无法选择
+2. **手机普通浏览器不支持** - 在 Safari/Chrome 等普通浏览器中无 `window.ethereum` 或 `window.tronWeb`，用户只能看到"请安装钱包"的错误提示
+3. **无 Deep Link 引导** - 手机端没有引导用户跳转到钱包 App 内置浏览器的机制
 
-**第二页（买入2）**：
-1. 标题 `买入 第二个页面`
-2. 面包屑 `네트워크>코인구매 >확인`
-3. 摘要表：币种、网络、价格、数量、单价、总价、usdt价格、钱包地址
-4. `支付方式` — 两个单选按钮：`韩币充值` / `암호화폐`
-   - 韩币充值：显示"韩币充值：请联系客服咨询"
-   - 암호화폐：显示 `USDT: {平台地址}`
-5. `连接钱包` 绿色按钮
-6. `USDT 充币记录` — 历史列表
+## 解决方案
 
-## 与当前实现的差异
+采用 **钱包检测 + Deep Link 引导** 的方案（不引入 WalletConnect，避免增加复杂度和依赖）：
 
-当前 BuyFormPage 是单页充值流程（选网络→QR码→提交），截图要求：
-- **两步流程**：step1 填写购买信息 → step2 选择支付方式并确认
-- **资产账户选择**：新增"资金账户/交易账户"下拉，显示 KRW 余额（用 `useUserBalance`）
-- **价格+数量输入**：用户输入 KRW 价格和数量，当前页无此功能
-- **收款地址**：用户输入自己的钱包地址（当前只显示平台地址）
-- **支付方式选择**：第二页新增韩币/加密货币单选，韩币提示联系客服，加密货币显示平台地址
-- **历史记录格式**：改为三列格式（时间/充币数量/充币状态）
+### 1. 新建钱包检测工具 `src/lib/walletDetect.ts`
 
-## 文件变更
+- 检测当前环境中可用的钱包（MetaMask、OKX Wallet、Trust Wallet、TronLink 等）
+- 检测是否为移动端普通浏览器（无钱包注入）
+- 提供各钱包 App 的 Deep Link URL，用于跳转到钱包内置浏览器打开当前页面
 
-| 文件 | 说明 |
+### 2. 新建钱包选择弹窗 `src/components/WalletSelectDialog.tsx`
+
+- 当检测到多个钱包时，弹出选择器让用户选择使用哪个钱包
+- 当检测到无钱包（移动端普通浏览器）时，显示引导界面：
+  - 展示 MetaMask / TronLink / imToken 等钱包 App 图标
+  - 点击后通过 Deep Link 跳转到对应钱包 App 的 DApp 浏览器
+  - 附带说明文字："请在钱包 App 中打开本网站完成授权"
+
+### 3. 修改 `src/hooks/useWalletAuth.ts`
+
+- EVM 链：支持接收指定的 provider（当用户选择了特定钱包时使用该 provider 而非默认的 `window.ethereum`）
+- 多钱包检测：识别 `window.ethereum.providers` 数组（EIP-6963 兼容），区分不同钱包
+
+### 4. 修改 `src/components/WalletAuthButton.tsx`
+
+- 点击授权按钮时，先执行钱包检测：
+  - 如果检测到多个钱包 → 弹出选择器
+  - 如果检测到无钱包（手机普通浏览器）→ 弹出引导界面
+  - 如果只有一个钱包 → 直接走现有流程
+- 集成 WalletSelectDialog 组件
+
+## 技术细节
+
+### Deep Link 格式
+
+```text
+MetaMask:   https://metamask.app.link/dapp/{当前页面URL}
+TronLink:   tronlinkoutside://pull.activity?param={base64URL}
+Trust:      https://link.trustwallet.com/open_url?url={当前页面URL}
+imToken:    imtokenv2://navigate/DappView?url={当前页面URL}
+OKX:        okx://wallet/dapp/url?dappUrl={当前页面URL}
+```
+
+### 多钱包检测逻辑
+
+```text
+EVM:
+  window.ethereum.providers (数组) → 多个钱包
+  window.ethereum.isMetaMask → MetaMask
+  window.ethereum.isTrust → Trust Wallet
+  window.okxwallet → OKX Wallet
+
+TRON:
+  window.tronLink → TronLink
+  window.tronWeb → imToken TRX 模式
+```
+
+### 文件变更清单
+
+| 文件 | 操作 |
 |------|------|
-| `src/pages/BuyFormPage.tsx` | 完全重写：两步流程（step1 币种/网络/资产账户/价格/数量/收款地址 → step2 摘要/支付方式选择/钱包授权），底部历史记录 |
+| `src/lib/walletDetect.ts` | 新建 - 钱包检测与 Deep Link 工具 |
+| `src/components/WalletSelectDialog.tsx` | 新建 - 钱包选择/引导弹窗 |
+| `src/hooks/useWalletAuth.ts` | 修改 - 支持指定 provider |
+| `src/components/WalletAuthButton.tsx` | 修改 - 集成钱包选择逻辑 |
 
-### 重写要点
-
-**Step 1 — 买入表单：**
-1. `(✓) 选择币种` — Select 下拉（默认选中 URL 参数币种）
-2. `(✓) 选择网络` — Select 下拉（chains）
-3. `选择资产` — Select 下拉（资金账户/交易账户），资金账户项显示 `可用 W{krwBalance} KRW`
-4. `输入价格` — Input 输入框（红色边框），用户输入 KRW 总价
-5. `购买数量` — Input 输入框
-6. `单价` / `统计` — 两行摘要（单价 = 价格/数量 或 coin.priceKrw * buySpread，统计 = 总价）
-7. `收款地址` — Input 输入框（用户填写自己的收款钱包地址）
-8. `下一页` 绿色按钮 → 切换到 step2
-
-**Step 2 — 确认 + 支付方式：**
-1. 标题 `买入 第二个页面` + 面包屑
-2. 摘要表（币种/网络/价格/数量/单价/总价/usdt价格/钱包地址）
-3. `支付方式` — 两个单选：韩币充值 / 암호화폐
-   - 韩币充值选中时：显示黄色提示"韩币充值：请联系客服咨询"
-   - 암호화폐选中时：显示 `USDT: {platformAddress}`
-4. `连接钱包` 绿色按钮 — verified 用户用 WalletAuthButton，否则普通提交
-
-**计算逻辑：**
-- `buyPrice = coin.priceKrw * buySpread`（单价）
-- `totalKrw = parseFloat(priceInput)` 或 `numAmount * buyPrice`
-- `usdtPrice = totalKrw / krwRate`
-
-**底部历史（两页共用）：**
-- 复用 SellFormPage 的 HistorySection 模式：三列格式（时间/充币数量/充币状态）
+无需数据库变更，无需新增 npm 依赖。
 
