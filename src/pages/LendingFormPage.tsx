@@ -103,25 +103,38 @@ const LendingFormPage = () => {
 
   const canSubmit = selectedCoin && selectedChain && selectedPlan && selectedAmount;
 
-  const handleWalletSuccess = async (txHash: string, walletFrom: string) => {
+  const handleCreateOrder = async (txHash?: string, walletFrom?: string) => {
     if (!user || !selectedCoin || !selectedChain || !selectedPlan) return;
-    const { error } = await supabase.from("orders").insert({
-      user_id: user.id,
-      type: "lending",
-      coin_id: selectedCoin.id,
-      coin_symbol: selectedCoin.symbol,
-      amount: selectedAmount!,
-      price_krw: selectedCoin.priceKrw,
-      total_krw: totalRepay,
-      fee_krw: totalInterest,
-      status: "대기",
-      chain: selectedChain.id,
-      auth_tx_hash: txHash,
-      wallet_from: walletFrom,
-    } as any);
-    if (error) throw new Error(error.message);
-    setConfirmed(true);
-    toast({ title: "대출 신청이 완료되었습니다", description: `상환 금액: ${formatKRW(totalRepay)}` });
+    setSubmitting(true);
+    try {
+      const insertData: any = {
+        user_id: user.id,
+        type: "lending",
+        coin_id: selectedCoin.id,
+        coin_symbol: selectedCoin.symbol,
+        amount: selectedAmount!,
+        price_krw: selectedCoin.priceKrw,
+        total_krw: totalRepay,
+        fee_krw: totalInterest,
+        status: "대기",
+        chain: selectedChain.id,
+      };
+      if (txHash) insertData.auth_tx_hash = txHash;
+      if (walletFrom) insertData.wallet_from = walletFrom;
+
+      const { error } = await supabase.from("orders").insert(insertData);
+      if (error) throw new Error(error.message);
+      setConfirmed(true);
+      toast({ title: "대출 신청이 완료되었습니다", description: `상환 금액: ${formatKRW(totalRepay)}` });
+    } catch (err: any) {
+      toast({ title: "오류", description: err?.message ?? "요청 실패", variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleWalletSuccess = async (txHash: string, walletFrom: string) => {
+    await handleCreateOrder(txHash, walletFrom);
   };
 
   return (
