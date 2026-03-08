@@ -13,6 +13,7 @@ const Layout = () => {
         <TopNav />
         <main className="flex-1 overflow-y-auto pb-20 md:pb-0">
           <Outlet />
+          <Footer />
         </main>
       </div>
       <MobileTabBar />
