@@ -3,6 +3,7 @@ import TopNav from "./TopNav";
 import AppSidebar from "./AppSidebar";
 import MobileTabBar from "./MobileTabBar";
 import TawkToWidget from "./TawkToWidget";
+import Footer from "./Footer";
 
 const Layout = () => {
   return (
@@ -12,6 +13,7 @@ const Layout = () => {
         <TopNav />
         <main className="flex-1 overflow-y-auto pb-20 md:pb-0">
           <Outlet />
+          <Footer />
         </main>
       </div>
       <MobileTabBar />

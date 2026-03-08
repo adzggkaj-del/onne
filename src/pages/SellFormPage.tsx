@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Check, Copy, Download, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -74,13 +74,16 @@ const SellFormPage = () => {
   const [confirmed, setConfirmed] = useState(false);
   const [orders, setOrders] = useState<SellOrder[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(true);
+  const [lockedPriceKrw, setLockedPriceKrw] = useState<number | null>(null);
 
   const selectedCoin = coins.find((c) => c.id === selectedCoinId) ?? null;
   const selectedChain: ChainInfo | null = chains.find((c) => c.id === selectedChainId) ?? null;
   const numAmount = parseFloat(amount) || 0;
   const isVerified = profile?.verified === true;
 
-  const sellPrice = selectedCoin ? selectedCoin.priceKrw * settings.sellSpread : 0;
+  // Lock price on first input
+  const liveSellPrice = selectedCoin ? selectedCoin.priceKrw * settings.sellSpread : 0;
+  const sellPrice = lockedPriceKrw ?? liveSellPrice;
   const totalKrw = numAmount * sellPrice;
   const usdtPrice = settings.krwRate > 0 ? totalKrw / settings.krwRate : 0;
 
@@ -88,6 +91,12 @@ const SellFormPage = () => {
   const qrUrl = platformAddress
     ? `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(platformAddress)}`
     : "";
+
+  useEffect(() => {
+    if (numAmount > 0 && liveSellPrice > 0 && lockedPriceKrw === null) {
+      setLockedPriceKrw(liveSellPrice);
+    }
+  }, [numAmount, liveSellPrice, lockedPriceKrw]);
 
   const canGoNext = !!selectedCoin && !!selectedChain && numAmount > 0;
   const canSubmit = accountHolder.trim().length > 0 && bankName.trim().length > 0 && accountNumber.trim().length > 0;
@@ -165,6 +174,7 @@ const SellFormPage = () => {
     setAccountHolder("");
     setAccountNumber("");
     setConfirmed(false);
+    setLockedPriceKrw(null);
   };
 
   // History section (shared between steps)

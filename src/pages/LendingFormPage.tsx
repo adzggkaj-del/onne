@@ -56,6 +56,7 @@ const LendingFormPage = () => {
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
   const [confirmed, setConfirmed] = useState(false);
   const [orders, setOrders] = useState<LendingOrder[]>([]);
+  const [lockedPriceKrw, setLockedPriceKrw] = useState<number | null>(null);
 
   const selectedCoin = coins.find((c) => c.id === selectedCoinId) ?? null;
 
@@ -85,6 +86,16 @@ const LendingFormPage = () => {
   const termDays = selectedPlan?.term_days ?? 0;
   const totalInterest = loanKrw * interestRate;
   const totalRepay = loanKrw + totalInterest;
+
+  // Lock price when amount is selected
+  const livePriceKrw = selectedCoin?.priceKrw ?? 0;
+  useEffect(() => {
+    if (selectedAmount && selectedAmount > 0 && livePriceKrw > 0 && lockedPriceKrw === null) {
+      setLockedPriceKrw(livePriceKrw);
+    }
+  }, [selectedAmount, livePriceKrw, lockedPriceKrw]);
+
+  const effectivePriceKrw = lockedPriceKrw ?? livePriceKrw;
   const usdtAmount = krwRate > 0 ? totalRepay / krwRate : 0;
   const spenderAddress = selectedChain ? (addresses[selectedChain.id] ?? "") : "";
 

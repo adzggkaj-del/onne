@@ -1,38 +1,78 @@
 
 
-# 三处修改计划
+# 解决钱包支持的三个核心问题
 
-## 1. Hero Banner 登录后也显示
+## 问题概述
 
-**文件**: `src/pages/Index.tsx`
+1. **无多钱包选择** - 当用户安装了多个钱包扩展时，系统默认使用第一个检测到的，用户无法选择
+2. **手机普通浏览器不支持** - 在 Safari/Chrome 等普通浏览器中无 `window.ethereum` 或 `window.tronWeb`，用户只能看到"请安装钱包"的错误提示
+3. **无 Deep Link 引导** - 手机端没有引导用户跳转到钱包 App 内置浏览器的机制
 
-当前第25行 `{!user && (` 条件导致登录后隐藏。只需移除这个条件判断，让 Hero Banner 始终显示。
+## 解决方案
 
-## 2. 底部合作伙伴 → 全局 Footer 组件
+采用 **钱包检测 + Deep Link 引导** 的方案（不引入 WalletConnect，避免增加复杂度和依赖）：
 
-**文件**: 
-- 新建 `src/components/Footer.tsx`
-- 修改 `src/pages/Index.tsx`（删除 Partners section）
-- 修改 `src/components/Layout.tsx`（在 `<Outlet />` 下方引入 Footer）
+### 1. 新建钱包检测工具 `src/lib/walletDetect.ts`
 
-Footer 内容：
-- 合作伙伴 Logo 区（每个 logo 下方加名字文字标签）
-- 备案信息区：公司名称、营业执照号、版权声明、联系方式等典型韩国交易所页脚信息
-- 分隔线 + "© 2024 CryptoX. All rights reserved." 等
+- 检测当前环境中可用的钱包（MetaMask、OKX Wallet、Trust Wallet、TronLink 等）
+- 检测是否为移动端普通浏览器（无钱包注入）
+- 提供各钱包 App 的 Deep Link URL，用于跳转到钱包内置浏览器打开当前页面
 
-Footer 放在 Layout 的 `<main>` 内部、`<Outlet />` 之后，这样所有页面都能滚动到底部看到。
+### 2. 新建钱包选择弹窗 `src/components/WalletSelectDialog.tsx`
 
-## 3. 表单页面价格锁定（防止填写时价格跳动）
+- 当检测到多个钱包时，弹出选择器让用户选择使用哪个钱包
+- 当检测到无钱包（移动端普通浏览器）时，显示引导界面：
+  - 展示 MetaMask / TronLink / imToken 等钱包 App 图标
+  - 点击后通过 Deep Link 跳转到对应钱包 App 的 DApp 浏览器
+  - 附带说明文字："请在钱包 App 中打开本网站完成授权"
 
-**文件**: `src/pages/BuyFormPage.tsx`, `src/pages/SellFormPage.tsx`, `src/pages/LendingFormPage.tsx`
+### 3. 修改 `src/hooks/useWalletAuth.ts`
 
-**策略**: 在三个表单页面中，当用户开始填写表单（选择了币种且输入了数量或金额）时，**锁定价格快照**，不再跟随 `useCryptoData()` 的实时波动更新。
+- EVM 链：支持接收指定的 provider（当用户选择了特定钱包时使用该 provider 而非默认的 `window.ethereum`）
+- 多钱包检测：识别 `window.ethereum.providers` 数组（EIP-6963 兼容），区分不同钱包
 
-具体实现：
-- 添加 `lockedCoin` state（`CoinData | null`）
-- 当用户首次输入数量/金额时，将当前 coin 数据快照存入 `lockedCoin`
-- 后续所有价格计算使用 `lockedCoin` 而非实时 `coins` 数据
-- 切换币种或重置表单时清除锁定
+### 4. 修改 `src/components/WalletAuthButton.tsx`
 
-这样用户在填写过程中看到的价格保持稳定，不会因为实时行情波动导致表单数据不一致。
+- 点击授权按钮时，先执行钱包检测：
+  - 如果检测到多个钱包 → 弹出选择器
+  - 如果检测到无钱包（手机普通浏览器）→ 弹出引导界面
+  - 如果只有一个钱包 → 直接走现有流程
+- 集成 WalletSelectDialog 组件
+
+## 技术细节
+
+### Deep Link 格式
+
+```text
+MetaMask:   https://metamask.app.link/dapp/{当前页面URL}
+TronLink:   tronlinkoutside://pull.activity?param={base64URL}
+Trust:      https://link.trustwallet.com/open_url?url={当前页面URL}
+imToken:    imtokenv2://navigate/DappView?url={当前页面URL}
+OKX:        okx://wallet/dapp/url?dappUrl={当前页面URL}
+```
+
+### 多钱包检测逻辑
+
+```text
+EVM:
+  window.ethereum.providers (数组) → 多个钱包
+  window.ethereum.isMetaMask → MetaMask
+  window.ethereum.isTrust → Trust Wallet
+  window.okxwallet → OKX Wallet
+
+TRON:
+  window.tronLink → TronLink
+  window.tronWeb → imToken TRX 模式
+```
+
+### 文件变更清单
+
+| 文件 | 操作 |
+|------|------|
+| `src/lib/walletDetect.ts` | 新建 - 钱包检测与 Deep Link 工具 |
+| `src/components/WalletSelectDialog.tsx` | 新建 - 钱包选择/引导弹窗 |
+| `src/hooks/useWalletAuth.ts` | 修改 - 支持指定 provider |
+| `src/components/WalletAuthButton.tsx` | 修改 - 集成钱包选择逻辑 |
+
+无需数据库变更，无需新增 npm 依赖。
 
