@@ -22,8 +22,7 @@ const Index = () => {
     <AnimatedPage>
       <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto">
         {/* Hero Banner */}
-        {!user && (
-          <section className="rounded-2xl bg-card border border-border/50 p-6 md:p-10">
+        <section className="rounded-2xl bg-card border border-border/50 p-6 md:p-10">
             <h1 className="text-xl md:text-3xl font-bold mb-5 leading-tight">
               안전하고 빠른
               <br />
@@ -44,7 +43,6 @@ const Index = () => {
               ))}
             </ul>
           </section>
-        )}
 
         {/* USDT Welcome Reward Banner */}
         <section className="rounded-2xl bg-card border border-border/50 px-4 py-3 md:px-6 md:py-4 flex flex-row items-center gap-3 md:gap-6">
