@@ -3,6 +3,7 @@ import TopNav from "./TopNav";
 import AppSidebar from "./AppSidebar";
 import MobileTabBar from "./MobileTabBar";
 import TawkToWidget from "./TawkToWidget";
+import Footer from "./Footer";
 
 const Layout = () => {
   return (
