@@ -100,6 +100,9 @@ const fetchCoins = async (krwRate: number): Promise<CoinData[]> => {
       change24h,
       volume24h,
       sparkline: generateSparkline(priceUsd, volatility),
+      buy_spread: sc.buy_spread,
+      sell_spread: sc.sell_spread,
+      lending_spread: sc.lending_spread,
     };
   });
 };

@@ -22,7 +22,7 @@ const BuyPage = () => {
 
         <div className="space-y-2">
           {coins.map((coin, index) => {
-            const discountedPrice = coin.priceKrw * buySpread;
+            const discountedPrice = coin.priceKrw * (coin.buy_spread ?? buySpread);
             return (
               <Card key={coin.id} className="bg-card border-border/50 hover:border-primary/20 transition-all">
                 <CardContent className="p-3 md:p-4">
