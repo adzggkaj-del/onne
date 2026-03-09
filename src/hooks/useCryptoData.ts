@@ -11,6 +11,9 @@ interface SupportedCoin {
   chain: string;
   icon: string;
   sort_order: number;
+  buy_spread: number | null;
+  sell_spread: number | null;
+  lending_spread: number | null;
 }
 
 interface BinanceTicker {
