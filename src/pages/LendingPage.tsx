@@ -34,8 +34,8 @@ const LendingPage = () => {
                     </div>
                   </div>
                   <div className="text-right">
-                    <PriceFlash value={coin.priceKrw * lendingSpread}>
-                      <span className="font-semibold text-sm">{formatKRW(coin.priceKrw * lendingSpread)}</span>
+                    <PriceFlash value={coin.priceKrw * (coin.lending_spread ?? lendingSpread)}>
+                      <span className="font-semibold text-sm">{formatKRW(coin.priceKrw * (coin.lending_spread ?? lendingSpread))}</span>
                     </PriceFlash>
                     <p className="text-xs text-muted-foreground">{formatVolume(coin.volume24h)}</p>
                   </div>

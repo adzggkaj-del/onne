@@ -85,7 +85,7 @@ const BuyFormPage = () => {
   const isVerified = profile?.verified === true;
 
   // Lock price on first input; use locked price for calculations
-  const liveBuyPrice = selectedCoin ? selectedCoin.priceKrw * settings.buySpread : 0;
+  const liveBuyPrice = selectedCoin ? selectedCoin.priceKrw * (selectedCoin.buy_spread ?? settings.buySpread) : 0;
   const buyPrice = lockedPriceKrw ?? liveBuyPrice;
   const totalKrw = numAmount * buyPrice;
   const usdtPrice = settings.krwRate > 0 ? totalKrw / settings.krwRate : 0;

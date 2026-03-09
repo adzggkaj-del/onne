@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { formatKRW } from "@/lib/cryptoData";
-import { Edit2 } from "lucide-react";
+import { Edit2, Star, ShieldCheck } from "lucide-react";
 
 interface Profile {
   id: string;
@@ -36,6 +36,21 @@ const AdminUsers = () => {
     },
   });
 
+  // Fetch admin roles for all users
+  const { data: adminRoles = [] } = useQuery({
+    queryKey: ["admin-user-roles"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select("user_id, role")
+        .eq("role", "admin");
+      if (error) throw error;
+      return (data ?? []) as { user_id: string; role: string }[];
+    },
+  });
+
+  const adminUserIds = new Set(adminRoles.map((r) => r.user_id));
+
   const toggleVerified = useMutation({
     mutationFn: async ({ id, verified }: { id: string; verified: boolean }) => {
       const { error } = await supabase.from("profiles").update({ verified }).eq("id", id);
@@ -44,6 +59,23 @@ const AdminUsers = () => {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-users"] });
       toast({ title: "사용자 상태가 업데이트되었습니다" });
+    },
+    onError: (e: Error) => toast({ title: "오류", description: e.message, variant: "destructive" }),
+  });
+
+  const toggleAdmin = useMutation({
+    mutationFn: async ({ user_id, makeAdmin }: { user_id: string; makeAdmin: boolean }) => {
+      if (makeAdmin) {
+        const { error } = await supabase.from("user_roles").insert({ user_id, role: "admin" } as any);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("user_roles").delete().eq("user_id", user_id).eq("role", "admin");
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-user-roles"] });
+      toast({ title: "관리자 권한이 업데이트되었습니다" });
     },
     onError: (e: Error) => toast({ title: "오류", description: e.message, variant: "destructive" }),
   });
@@ -81,14 +113,15 @@ const AdminUsers = () => {
             <TableRow>
               <TableHead>UID</TableHead>
               <TableHead>사용자명</TableHead>
-              <TableHead>인증</TableHead>
+              <TableHead>⭐ 星표</TableHead>
+              <TableHead>관리자</TableHead>
               <TableHead>플랫폼 보너스</TableHead>
               <TableHead>가입일</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">로딩 중...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">로딩 중...</TableCell></TableRow>
             ) : users.map((u) => (
               <TableRow key={u.id}>
                 <TableCell className="font-mono text-xs">{u.uid_display}</TableCell>
@@ -96,9 +129,22 @@ const AdminUsers = () => {
                 <TableCell>
                   <div className="flex items-center gap-2">
                     <Switch checked={u.verified} onCheckedChange={(v) => toggleVerified.mutate({ id: u.id, verified: v })} />
-                    <Badge variant={u.verified ? "default" : "secondary"} className="text-xs">
-                      {u.verified ? "인증됨" : "미인증"}
+                    <Badge variant={u.verified ? "default" : "secondary"} className="text-xs gap-1">
+                      {u.verified ? <><Star className="h-3 w-3" /> 星표</> : "普通"}
                     </Badge>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={adminUserIds.has(u.user_id)}
+                      onCheckedChange={(v) => toggleAdmin.mutate({ user_id: u.user_id, makeAdmin: v })}
+                    />
+                    {adminUserIds.has(u.user_id) && (
+                      <Badge variant="default" className="text-xs gap-1 bg-amber-500/20 text-amber-400 border-amber-500/30">
+                        <ShieldCheck className="h-3 w-3" /> Admin
+                      </Badge>
+                    )}
                   </div>
                 </TableCell>
                 <TableCell>

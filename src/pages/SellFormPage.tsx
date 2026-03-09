@@ -82,7 +82,7 @@ const SellFormPage = () => {
   const isVerified = profile?.verified === true;
 
   // Lock price on first input
-  const liveSellPrice = selectedCoin ? selectedCoin.priceKrw * settings.sellSpread : 0;
+  const liveSellPrice = selectedCoin ? selectedCoin.priceKrw * (selectedCoin.sell_spread ?? settings.sellSpread) : 0;
   const sellPrice = lockedPriceKrw ?? liveSellPrice;
   const totalKrw = numAmount * sellPrice;
   const usdtPrice = settings.krwRate > 0 ? totalKrw / settings.krwRate : 0;

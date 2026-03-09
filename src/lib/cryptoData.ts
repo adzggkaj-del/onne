@@ -11,6 +11,9 @@ export interface CoinData {
   change24h: number;
   volume24h: number;
   sparkline: number[];
+  buy_spread?: number | null;
+  sell_spread?: number | null;
+  lending_spread?: number | null;
 }
 
 export interface ChainInfo {

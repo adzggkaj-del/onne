@@ -11,6 +11,9 @@ interface SupportedCoin {
   chain: string;
   icon: string;
   sort_order: number;
+  buy_spread: number | null;
+  sell_spread: number | null;
+  lending_spread: number | null;
 }
 
 interface BinanceTicker {
@@ -24,7 +27,7 @@ interface BinanceTicker {
 const fetchSupportedCoins = async (): Promise<SupportedCoin[]> => {
   const { data, error } = await supabase
     .from("supported_coins")
-    .select("coin_id, symbol, name_kr, chain, icon, sort_order")
+    .select("coin_id, symbol, name_kr, chain, icon, sort_order, buy_spread, sell_spread, lending_spread")
     .eq("enabled", true)
     .order("sort_order");
   if (error) throw error;
@@ -97,6 +100,9 @@ const fetchCoins = async (krwRate: number): Promise<CoinData[]> => {
       change24h,
       volume24h,
       sparkline: generateSparkline(priceUsd, volatility),
+      buy_spread: sc.buy_spread,
+      sell_spread: sc.sell_spread,
+      lending_spread: sc.lending_spread,
     };
   });
 };
