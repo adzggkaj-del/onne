@@ -27,7 +27,7 @@ interface BinanceTicker {
 const fetchSupportedCoins = async (): Promise<SupportedCoin[]> => {
   const { data, error } = await supabase
     .from("supported_coins")
-    .select("coin_id, symbol, name_kr, chain, icon, sort_order")
+    .select("coin_id, symbol, name_kr, chain, icon, sort_order, buy_spread, sell_spread, lending_spread")
     .eq("enabled", true)
     .order("sort_order");
   if (error) throw error;
