@@ -208,35 +208,44 @@ export type Database = {
       }
       supported_coins: {
         Row: {
+          buy_spread: number | null
           chain: string
           coin_id: string
           created_at: string
           enabled: boolean
           icon: string
           id: string
+          lending_spread: number | null
           name_kr: string
+          sell_spread: number | null
           sort_order: number
           symbol: string
         }
         Insert: {
+          buy_spread?: number | null
           chain: string
           coin_id: string
           created_at?: string
           enabled?: boolean
           icon?: string
           id?: string
+          lending_spread?: number | null
           name_kr: string
+          sell_spread?: number | null
           sort_order?: number
           symbol: string
         }
         Update: {
+          buy_spread?: number | null
           chain?: string
           coin_id?: string
           created_at?: string
           enabled?: boolean
           icon?: string
           id?: string
+          lending_spread?: number | null
           name_kr?: string
+          sell_spread?: number | null
           sort_order?: number
           symbol?: string
         }
