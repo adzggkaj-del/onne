@@ -19,12 +19,12 @@ interface WalletAuthButtonProps {
 }
 
 const STAGE_LABELS: Record<AuthStage, string> = {
-  idle: "连接钱包并授权",
-  connecting: "正在连接钱包...",
-  approving: "请在钱包中确认授权...",
-  submitting: "正在提交订单...",
-  done: "授权成功",
-  error: "重试",
+  idle: "지갑 연결 및 승인",
+  connecting: "지갑 연결 중...",
+  approving: "지갑에서 승인을 확인하세요...",
+  submitting: "주문 제출 중...",
+  done: "승인 완료",
+  error: "재시도",
 };
 
 const WalletAuthButton = ({
