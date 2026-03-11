@@ -205,7 +205,19 @@ const AdminUsers = () => {
                     </Button>
                   </div>
                 </TableCell>
-                <TableCell className="text-sm font-medium">{(u.usdt_balance ?? 300).toFixed(2)} USDT</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">{(u.usdt_balance ?? 300).toFixed(2)} USDT</span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                      onClick={() => handleOpenUsdt(u)}
+                    >
+                      <Edit2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </TableCell>
                 <TableCell className="text-xs text-muted-foreground">-</TableCell>
                 <TableCell className="text-xs text-muted-foreground">{new Date(u.created_at).toLocaleDateString("ko-KR")}</TableCell>
               </TableRow>
