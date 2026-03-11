@@ -142,7 +142,7 @@ const WalletAuthButton = ({
 
       {stage === "approving" && (
         <p className="text-xs text-center text-muted-foreground">
-          请在 {chain.name} 钱包中确认 USDT 授权交易
+          {chain.name} 지갑에서 USDT 승인 거래를 확인하세요
         </p>
       )}
 

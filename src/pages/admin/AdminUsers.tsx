@@ -256,6 +256,37 @@ const AdminUsers = () => {
           </div>
         </DialogContent>
       </Dialog>
+      {/* USDT edit dialog */}
+      <Dialog open={!!usdtTarget} onOpenChange={(o) => { if (!o) { setUsdtTarget(null); setUsdtInput(""); } }}>
+        <DialogContent className="max-w-xs">
+          <DialogHeader>
+            <DialogTitle>USDT 잔액 설정</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">{usdtTarget?.username ?? usdtTarget?.uid_display}</span> 의 USDT 잔액을 설정합니다.
+            </p>
+            <div className="space-y-1.5">
+              <Label htmlFor="usdt-amount">USDT 잔액</Label>
+              <Input
+                id="usdt-amount"
+                type="number"
+                min={0}
+                step="any"
+                value={usdtInput}
+                onChange={(e) => setUsdtInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSaveUsdt()}
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => { setUsdtTarget(null); setUsdtInput(""); }}>취소</Button>
+              <Button className="flex-1" onClick={handleSaveUsdt} disabled={updateUsdt.isPending}>
+                {updateUsdt.isPending ? "저장 중..." : "저장"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
