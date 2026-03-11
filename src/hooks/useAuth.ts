@@ -10,6 +10,7 @@ export interface Profile {
   uid_display: string | null;
   verified: boolean;
   bonus_krw: number;
+  usdt_balance: number;
 }
 
 export const useAuth = () => {

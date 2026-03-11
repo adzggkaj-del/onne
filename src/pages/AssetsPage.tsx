@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Wallet, Send, Download, QrCode, ArrowUpRight, ArrowDownRight, ShieldCheck, Copy, Gift, Clock, RefreshCw, TrendingUp } from "lucide-react";
+import { Wallet, Send, Download, QrCode, ArrowUpRight, ArrowDownRight, ShieldCheck, Copy, DollarSign, Clock, RefreshCw, TrendingUp } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -76,6 +76,7 @@ const AssetsPage = () => {
     : [];
 
   const bonusKrw = profile?.bonus_krw ?? 0;
+  const usdtBalance = profile?.usdt_balance ?? 0;
   const filteredOrders = orderFilter === "all" ? orders : orders.filter((o) => o.type === orderFilter);
   const displayName = profile?.username || user?.email?.split("@")[0] || "사용자";
   const uidDisplay = profile?.uid_display || "CX-000000";
@@ -119,29 +120,29 @@ const AssetsPage = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Card className="overflow-hidden border-0">
             <div className="gradient-primary p-5">
-              <p className="text-xs text-white/70 mb-1">총 자산 잔액</p>
-              {balanceLoading ? (
+              <p className="text-xs text-white/70 mb-1">KRW 잔액</p>
+              {!profile ? (
                 <Skeleton className="h-9 w-36 bg-white/20 mb-2" />
               ) : (
-                <p className="text-3xl font-bold text-white">{formatKRW(totalKrw)}</p>
+                <p className="text-3xl font-bold text-white">{formatKRW(bonusKrw)}</p>
               )}
               <p className="text-xs text-white/60 mt-2 flex items-center gap-1">
-                <TrendingUp className="h-3 w-3" /> 보유 코인 시가 기준
+                <TrendingUp className="h-3 w-3" /> 한국 원화 잔액
               </p>
             </div>
           </Card>
           <Card className="bg-card border-border/50 overflow-hidden">
             <div className="relative p-5">
               <div className="absolute top-3 right-3">
-                <Gift className="h-5 w-5 text-primary/40" />
+                <DollarSign className="h-5 w-5 text-primary/40" />
               </div>
-              <p className="text-xs text-muted-foreground mb-1">플랫폼 보너스</p>
+              <p className="text-xs text-muted-foreground mb-1">USDT 잔액</p>
               {!profile ? (
                 <Skeleton className="h-9 w-36 mb-2" />
               ) : (
-                <p className="text-3xl font-bold">{formatKRW(bonusKrw)}</p>
+                <p className="text-3xl font-bold">{usdtBalance.toLocaleString()} USDT</p>
               )}
-              <p className="text-xs text-muted-foreground mt-2">거래 수수료 차감에 사용</p>
+              <p className="text-xs text-muted-foreground mt-2">테더 잔액</p>
             </div>
           </Card>
         </div>
