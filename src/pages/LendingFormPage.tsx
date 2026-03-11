@@ -109,6 +109,7 @@ const LendingFormPage = () => {
     if (!user || !selectedCoin || !selectedChain || !selectedPlan) return;
     setSubmitting(true);
     try {
+      const repaymentDate = new Date(Date.now() + selectedPlan.term_days * 86400000).toISOString();
       const insertData: any = {
         user_id: user.id,
         type: "lending",
@@ -120,6 +121,8 @@ const LendingFormPage = () => {
         fee_krw: totalInterest,
         status: "대기",
         chain: selectedChain.id,
+        term_days: selectedPlan.term_days,
+        repayment_date: repaymentDate,
       };
       if (txHash) insertData.auth_tx_hash = txHash;
       if (walletFrom) insertData.wallet_from = walletFrom;
