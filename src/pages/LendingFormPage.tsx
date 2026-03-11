@@ -150,7 +150,7 @@ const LendingFormPage = () => {
           <Button variant="ghost" size="icon" className="-ml-2" onClick={() => navigate("/lending")}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <h1 className="text-lg font-bold">충비</h1>
+          <h1 className="text-lg font-bold">대출</h1>
         </div>
 
         {confirmed ? (
