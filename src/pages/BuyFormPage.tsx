@@ -202,15 +202,17 @@ const BuyFormPage = () => {
       ) : (
         <div className="rounded-xl bg-card border border-border/50 divide-y divide-border/30 overflow-hidden">
           {/* Header */}
-          <div className="grid grid-cols-3 px-4 py-2.5 text-xs text-muted-foreground">
+          <div className="grid grid-cols-4 px-4 py-2.5 text-xs text-muted-foreground">
             <span>시간</span>
             <span className="text-center">충비 수량</span>
+            <span className="text-center">총액(KRW)</span>
             <span className="text-right">충비 상태</span>
           </div>
           {orders.map((order) => (
-            <div key={order.id} className="grid grid-cols-3 px-4 py-3 text-sm items-center">
+            <div key={order.id} className="grid grid-cols-4 px-4 py-3 text-sm items-center">
               <span className="text-xs text-muted-foreground">{formatDate(order.created_at)}</span>
               <span className="text-center font-medium">{order.amount} {order.coin_symbol}</span>
+              <span className="text-center text-xs">₩{order.total_krw.toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</span>
               <span className={`text-right text-xs ${statusClass(order.status)}`}>{statusLabel(order.status)}</span>
             </div>
           ))}
