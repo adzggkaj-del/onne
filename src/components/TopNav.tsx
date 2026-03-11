@@ -26,14 +26,7 @@ const TopNav = () => {
         </span>
       </div>
 
-      {/* Search */}
-      <div className="hidden md:flex relative max-w-md flex-1 mx-4">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="코인 검색..."
-          className="pl-10 bg-secondary border-border/50 focus:border-primary/50"
-        />
-      </div>
+      <div className="flex-1" />
 
       {/* Right actions */}
       <div className="flex items-center gap-2">
