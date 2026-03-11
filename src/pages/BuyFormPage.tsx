@@ -319,7 +319,10 @@ const BuyFormPage = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="funding">
-                        자금 계좌 · 可用 ₩{krwBalance.toLocaleString("ko-KR", { maximumFractionDigits: 0 })} KRW
+                        <div className="flex items-center justify-between w-full gap-4">
+                          <span>자금 계좌</span>
+                          <span className="text-muted-foreground text-xs">사용 가능 ₩{krwBalance.toLocaleString("ko-KR", { maximumFractionDigits: 0 })} KRW</span>
+                        </div>
                       </SelectItem>
                       <SelectItem value="trading">
                         거래 계좌
