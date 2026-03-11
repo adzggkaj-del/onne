@@ -179,6 +179,7 @@ export type Database = {
           bonus_krw: number
           created_at: string
           id: string
+          last_ip: string | null
           phone: string | null
           uid_display: string | null
           updated_at: string
@@ -192,6 +193,7 @@ export type Database = {
           bonus_krw?: number
           created_at?: string
           id?: string
+          last_ip?: string | null
           phone?: string | null
           uid_display?: string | null
           updated_at?: string
@@ -205,6 +207,7 @@ export type Database = {
           bonus_krw?: number
           created_at?: string
           id?: string
+          last_ip?: string | null
           phone?: string | null
           uid_display?: string | null
           updated_at?: string

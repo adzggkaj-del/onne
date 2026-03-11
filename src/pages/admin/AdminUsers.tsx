@@ -22,6 +22,7 @@ interface Profile {
   usdt_balance: number;
   phone: string | null;
   created_at: string;
+  last_ip: string | null;
 }
 
 const AdminUsers = () => {
@@ -154,7 +155,7 @@ const AdminUsers = () => {
               <TableHead>이메일</TableHead>
               <TableHead>사용자명</TableHead>
               <TableHead>전화번호</TableHead>
-              <TableHead>⭐ 星표</TableHead>
+              <TableHead>⭐ 인증</TableHead>
               <TableHead>관리자</TableHead>
               <TableHead>KRW 잔액</TableHead>
               <TableHead>USDT 잔액</TableHead>
@@ -175,7 +176,7 @@ const AdminUsers = () => {
                   <div className="flex items-center gap-2">
                     <Switch checked={u.verified} onCheckedChange={(v) => toggleVerified.mutate({ id: u.id, verified: v })} />
                     <Badge variant={u.verified ? "default" : "secondary"} className="text-xs gap-1">
-                      {u.verified ? <><Star className="h-3 w-3" /> 星表</> : "普通"}
+                      {u.verified ? <><Star className="h-3 w-3" /> 인증</> : "일반"}
                     </Badge>
                   </div>
                 </TableCell>
@@ -218,7 +219,7 @@ const AdminUsers = () => {
                     </Button>
                   </div>
                 </TableCell>
-                <TableCell className="text-xs text-muted-foreground">-</TableCell>
+                <TableCell className="text-xs text-muted-foreground">{(u as any).last_ip ?? "-"}</TableCell>
                 <TableCell className="text-xs text-muted-foreground">{new Date(u.created_at).toLocaleDateString("ko-KR")}</TableCell>
               </TableRow>
             ))}

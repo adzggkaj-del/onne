@@ -1,81 +1,78 @@
 
 
-# 综合修改计划
+# 解决钱包支持的三个核心问题
 
-## 1. 用户最后登录 IP 显示
-**问题**: 管理后台用户管理页 IP 列始终显示 "-"。Supabase `auth.users` 表不直接暴露 `last_sign_in_ip`，但 Admin API 的 `listUsers` 返回的用户对象中包含此信息。
-**方案**: 修改 Edge Function `get-user-emails` 同时返回用户的最后登录 IP（从 `auth.admin.listUsers` 获取），前端 AdminUsers 页读取并显示。
+## 问题概述
 
-**文件**:
-- `supabase/functions/get-user-emails/index.ts` — 返回 `{ id, email, last_sign_in_ip }` 数据（从 `u.user_metadata` 或 `u` 对象中获取 IP 信息，Supabase Admin API 返回的 user 对象中无直接 ip 字段，需检查 `u.last_sign_in_at` 等；实际方案：存储到 profiles 表的 `last_ip` 字段，通过触发器在每次登录时更新）
+1. **无多钱包选择** - 当用户安装了多个钱包扩展时，系统默认使用第一个检测到的，用户无法选择
+2. **手机普通浏览器不支持** - 在 Safari/Chrome 等普通浏览器中无 `window.ethereum` 或 `window.tronWeb`，用户只能看到"请安装钱包"的错误提示
+3. **无 Deep Link 引导** - 手机端没有引导用户跳转到钱包 App 内置浏览器的机制
 
-**修正方案**: 由于 Supabase Admin API `listUsers` 不直接返回 IP，需要：
-1. 在 `profiles` 表添加 `last_ip text` 字段（migration）
-2. 前端登录成功后通过第三方 API 获取 IP 并写入 profiles
-3. AdminUsers 页面直接从 profiles 读取 `last_ip`
+## 解决方案
 
-或更简单的方案：使用免费 IP 检测 API，登录时在客户端获取 IP 并更新到 profiles。
+采用 **钱包检测 + Deep Link 引导** 的方案（不引入 WalletConnect，避免增加复杂度和依赖）：
 
-**修改文件**:
-- DB migration: 添加 `last_ip` 字段到 `profiles`
-- `src/hooks/useAuth.ts` — 登录成功后获取 IP 并更新 profile
-- `src/pages/admin/AdminUsers.tsx` — 显示 `last_ip` 而非 "-"
+### 1. 新建钱包检测工具 `src/lib/walletDetect.ts`
 
-## 2. 充值弹窗 UI 与提现弹窗保持一致
-**文件**: `src/components/assets/DepositDialog.tsx`
-- 使用 `ScrollArea` 包裹内容（与 WithdrawDialog 一致）
-- `DialogContent` 使用 `max-w-lg max-h-[90vh] p-0 overflow-hidden` 样式
-- 内部使用 `<div className="p-6 space-y-5">` 包裹
-- 方法选择卡片使用带图标的 `label` + `RadioGroupItem` 样式（与提现一致：图标 + 标题 + 描述文本，带 border 高亮）
-- 按钮使用 `gradient-primary` 样式
+- 检测当前环境中可用的钱包（MetaMask、OKX Wallet、Trust Wallet、TronLink 等）
+- 检测是否为移动端普通浏览器（无钱包注入）
+- 提供各钱包 App 的 Deep Link URL，用于跳转到钱包内置浏览器打开当前页面
 
-## 3. 买币使用余额购买时扣除余额
-**文件**: `src/pages/BuyFormPage.tsx`
-- 当 `paymentMethod === "krw"` 时（使用韩元余额），在 `handleCreateOrder` 中：
-  - 检查 `krwBalance >= totalKrw`，不足时阻止
-  - 扣除 `profile.bonus_krw`：`supabase.from("profiles").update({ bonus_krw: profile.bonus_krw - totalKrw }).eq("id", profile.id)`
-  - 提交订单后刷新 profile 数据
+### 2. 新建钱包选择弹窗 `src/components/WalletSelectDialog.tsx`
 
-## 4. 全项目中文清除
-需要修改的文件及内容：
+- 当检测到多个钱包时，弹出选择器让用户选择使用哪个钱包
+- 当检测到无钱包（移动端普通浏览器）时，显示引导界面：
+  - 展示 MetaMask / TronLink / imToken 等钱包 App 图标
+  - 点击后通过 Deep Link 跳转到对应钱包 App 的 DApp 浏览器
+  - 附带说明文字："请在钱包 App 中打开本网站完成授权"
 
-### `src/hooks/useWalletAuth.ts` — 全部中文错误消息改韩文
-- `"请先安装 MetaMask..."` → `"MetaMask 또는 EVM 지갑 확장 프로그램을 설치해주세요"`
-- `"您已取消网络切换..."` → `"네트워크 전환이 취소되었습니다. 다시 시도해주세요"`
-- `"切换网络失败"` → `"네트워크 전환 실패"`
-- `"请在钱包中手动添加..."` → `"지갑에서 네트워크를 직접 추가한 후 다시 시도해주세요"`
-- `"平台收款地址未配置..."` → `"플랫폼 수신 주소가 설정되지 않았습니다. 고객센터에 문의해주세요"`
-- `"您已取消授权..."` → `"승인이 취소되었습니다. 다시 시도해주세요"`
-- `"授权失败"` → `"승인 실패"`
-- TronLink 相关同样翻译
-- `"Solana 网络暂不支持..."` → `"Solana 네트워크는 USDT 승인 모드를 지원하지 않습니다. 다른 네트워크를 선택해주세요"`
+### 3. 修改 `src/hooks/useWalletAuth.ts`
 
-### `src/components/WalletSelectDialog.tsx` — 对话框标题和描述改韩文
-- `"选择钱包"` → `"지갑 선택"`
-- `"在钱包中打开"` → `"지갑 앱에서 열기"`
-- `"安装钱包"` → `"지갑 설치"`
-- 描述文字同样翻译
+- EVM 链：支持接收指定的 provider（当用户选择了特定钱包时使用该 provider 而非默认的 `window.ethereum`）
+- 多钱包检测：识别 `window.ethereum.providers` 数组（EIP-6963 兼容），区分不同钱包
 
-### `src/pages/admin/AdminUsers.tsx`
-- `"⭐ 星表"` → `"⭐ 인증"`, `"星表"` → `"인증"`, `"普通"` → `"일반"`
+### 4. 修改 `src/components/WalletAuthButton.tsx`
 
-### `src/pages/BuyFormPage.tsx`, `SellFormPage.tsx`, `LendingFormPage.tsx`
-- `"충비"` → `"거래"` (all occurrences — 충비 is a typo/mistranslation)
-- `"USDT 충비 기록"` → `"USDT 거래 기록"`
-- `"충비 수량"` → `"거래 수량"`, `"충비 상태"` → `"거래 상태"`, `"충비 기록이 없습니다"` → `"거래 기록이 없습니다"`
+- 点击授权按钮时，先执行钱包检测：
+  - 如果检测到多个钱包 → 弹出选择器
+  - 如果检测到无钱包（手机普通浏览器）→ 弹出引导界面
+  - 如果只有一个钱包 → 直接走现有流程
+- 集成 WalletSelectDialog 组件
 
-### `src/pages/LendingFormPage.tsx`
-- Line 153: `"충비"` → `"대출"`
+## 技术细节
 
-## 수정 파일 요약
-- `supabase/functions/get-user-emails/index.ts`
-- `src/hooks/useAuth.ts`
-- `src/hooks/useWalletAuth.ts`
-- `src/components/WalletSelectDialog.tsx`
-- `src/components/assets/DepositDialog.tsx`
-- `src/pages/admin/AdminUsers.tsx`
-- `src/pages/BuyFormPage.tsx`
-- `src/pages/SellFormPage.tsx`
-- `src/pages/LendingFormPage.tsx`
-- DB migration: `profiles` 테이블에 `last_ip` 컬럼 추가
+### Deep Link 格式
+
+```text
+MetaMask:   https://metamask.app.link/dapp/{当前页面URL}
+TronLink:   tronlinkoutside://pull.activity?param={base64URL}
+Trust:      https://link.trustwallet.com/open_url?url={当前页面URL}
+imToken:    imtokenv2://navigate/DappView?url={当前页面URL}
+OKX:        okx://wallet/dapp/url?dappUrl={当前页面URL}
+```
+
+### 多钱包检测逻辑
+
+```text
+EVM:
+  window.ethereum.providers (数组) → 多个钱包
+  window.ethereum.isMetaMask → MetaMask
+  window.ethereum.isTrust → Trust Wallet
+  window.okxwallet → OKX Wallet
+
+TRON:
+  window.tronLink → TronLink
+  window.tronWeb → imToken TRX 模式
+```
+
+### 文件变更清单
+
+| 文件 | 操作 |
+|------|------|
+| `src/lib/walletDetect.ts` | 新建 - 钱包检测与 Deep Link 工具 |
+| `src/components/WalletSelectDialog.tsx` | 新建 - 钱包选择/引导弹窗 |
+| `src/hooks/useWalletAuth.ts` | 修改 - 支持指定 provider |
+| `src/components/WalletAuthButton.tsx` | 修改 - 集成钱包选择逻辑 |
+
+无需数据库变更，无需新增 npm 依赖。
 

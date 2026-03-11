@@ -182,7 +182,7 @@ const SellFormPage = () => {
   const HistorySection = () => (
     <div className="space-y-3 pt-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold">USDT 충비 기록</h2>
+        <h2 className="text-sm font-semibold">USDT 거래 기록</h2>
         <Download className="h-4 w-4 text-muted-foreground" />
       </div>
 
@@ -190,16 +190,16 @@ const SellFormPage = () => {
         <div className="text-center py-6 text-sm text-muted-foreground">불러오는 중...</div>
       ) : orders.length === 0 ? (
         <div className="rounded-xl bg-card border border-border/50 p-6 text-center">
-          <p className="text-sm text-muted-foreground">충비 기록이 없습니다</p>
+          <p className="text-sm text-muted-foreground">거래 기록이 없습니다</p>
         </div>
       ) : (
         <div className="rounded-xl bg-card border border-border/50 divide-y divide-border/30 overflow-hidden">
           {/* Header */}
           <div className="grid grid-cols-4 px-4 py-2.5 text-xs text-muted-foreground">
             <span>시간</span>
-            <span className="text-center">충비 수량</span>
+            <span className="text-center">거래 수량</span>
             <span className="text-center">총액(KRW)</span>
-            <span className="text-right">충비 상태</span>
+            <span className="text-right">거래 상태</span>
           </div>
           {orders.map((order) => (
             <div key={order.id} className="grid grid-cols-4 px-4 py-3 text-sm items-center">
