@@ -447,15 +447,23 @@ const BuyFormPage = () => {
                   한화 충전: 고객센터에 문의해 주세요
                 </div>
               ) : platformAddress ? (
-                <div className="rounded-xl bg-card border border-border/50 p-4 space-y-2">
+                <div className="rounded-xl bg-card border border-border/50 p-4 space-y-3">
                   <p className="text-xs text-muted-foreground">USDT 송금 주소</p>
-                  <div className="flex items-center gap-2">
-                    <code className="flex-1 text-xs break-all bg-muted/50 rounded-lg p-2.5 font-mono">
-                      {platformAddress}
-                    </code>
-                    <Button variant="outline" size="icon" className="shrink-0 h-9 w-9 border-border/50" onClick={handleCopy}>
-                      <Copy className="h-3.5 w-3.5" />
-                    </Button>
+                  <div className="flex flex-col items-center gap-3">
+                    <img
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(platformAddress)}`}
+                      alt="QR Code"
+                      className="w-40 h-40 rounded-lg"
+                      loading="lazy"
+                    />
+                    <div className="flex items-center gap-2 w-full">
+                      <code className="flex-1 text-xs break-all bg-muted/50 rounded-lg p-2.5 font-mono">
+                        {platformAddress}
+                      </code>
+                      <Button variant="outline" size="icon" className="shrink-0 h-9 w-9 border-border/50" onClick={handleCopy}>
+                        <Copy className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ) : (
