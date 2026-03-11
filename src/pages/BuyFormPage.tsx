@@ -41,9 +41,10 @@ const formatDate = (dateStr: string) => {
 
 const statusLabel = (status: string) => {
   switch (status) {
-    case "완료": return "已转入";
-    case "대기": return "待处理";
-    case "거부": return "已拒绝";
+    case "완료": return "완료";
+    case "대기": return "대기";
+    case "거부": return "거부";
+    case "취소": return "취소";
     default: return status;
   }
 };
