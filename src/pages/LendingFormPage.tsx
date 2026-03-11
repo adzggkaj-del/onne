@@ -75,7 +75,7 @@ const LendingFormPage = () => {
     const fetchOrders = async () => {
       const { data } = await supabase
         .from("orders")
-        .select("id, coin_symbol, amount, total_krw, status, created_at, chain")
+        .select("id, coin_symbol, amount, total_krw, status, created_at, chain, term_days, repayment_date")
         .eq("user_id", user.id)
         .eq("type", "lending")
         .order("created_at", { ascending: false })
