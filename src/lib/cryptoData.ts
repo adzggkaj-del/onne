@@ -41,6 +41,13 @@ export const BINANCE_SYMBOL_MAP: Record<string, string> = {
   tron: "TRXUSDT",
   "matic-network": "MATICUSDT",
   tether: "", // fixed at 1 USD
+  dogecoin: "DOGEUSDT",
+  "usd-coin": "",
+  "bitcoin-cash": "BCHUSDT",
+  cardano: "ADAUSDT",
+  litecoin: "LTCUSDT",
+  "ethereum-classic": "ETCUSDT",
+  monero: "XMRUSDT",
 };
 
 export const generateSparkline = (base: number, volatility: number): number[] => {
