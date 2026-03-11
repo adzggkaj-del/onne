@@ -41,6 +41,13 @@ export const BINANCE_SYMBOL_MAP: Record<string, string> = {
   tron: "TRXUSDT",
   "matic-network": "MATICUSDT",
   tether: "", // fixed at 1 USD
+  dogecoin: "DOGEUSDT",
+  "usd-coin": "",
+  "bitcoin-cash": "BCHUSDT",
+  cardano: "ADAUSDT",
+  litecoin: "LTCUSDT",
+  "ethereum-classic": "ETCUSDT",
+  monero: "XMRUSDT",
 };
 
 export const generateSparkline = (base: number, volatility: number): number[] => {
@@ -95,6 +102,41 @@ export const mockCoins: CoinData[] = [
     id: "usdt", symbol: "USDT", name: "Tether", nameKr: "테더",
     icon: "₮", image: "https://assets.coingecko.com/coins/images/325/small/Tether.png", chain: "ethereum", priceUsd: 1.0, priceKrw: 1.0 * KRW_RATE,
     change24h: 0.01, volume24h: 62000000000, sparkline: generateSparkline(1.0, 0.001),
+  },
+  {
+    id: "dogecoin", symbol: "DOGE", name: "Dogecoin", nameKr: "도지코인",
+    icon: "🐕", image: "https://assets.coingecko.com/coins/images/5/small/dogecoin.png", chain: "ethereum", priceUsd: 0.32, priceKrw: 0.32 * KRW_RATE,
+    change24h: 1.5, volume24h: 1800000000, sparkline: generateSparkline(0.32, 0.005),
+  },
+  {
+    id: "usd-coin", symbol: "USDC", name: "USD Coin", nameKr: "유에스디씨",
+    icon: "💲", image: "https://assets.coingecko.com/coins/images/6319/small/usdc.png", chain: "ethereum", priceUsd: 1.0, priceKrw: 1.0 * KRW_RATE,
+    change24h: 0.0, volume24h: 8000000000, sparkline: generateSparkline(1.0, 0.001),
+  },
+  {
+    id: "bitcoin-cash", symbol: "BCH", name: "Bitcoin Cash", nameKr: "비트코인캐시",
+    icon: "Ƀ", image: "https://assets.coingecko.com/coins/images/780/small/bitcoin-cash-circle.png", chain: "ethereum", priceUsd: 340, priceKrw: 340 * KRW_RATE,
+    change24h: -0.8, volume24h: 600000000, sparkline: generateSparkline(340, 5),
+  },
+  {
+    id: "cardano", symbol: "ADA", name: "Cardano", nameKr: "카르다노",
+    icon: "♦", image: "https://assets.coingecko.com/coins/images/975/small/cardano.png", chain: "ethereum", priceUsd: 0.68, priceKrw: 0.68 * KRW_RATE,
+    change24h: 2.1, volume24h: 900000000, sparkline: generateSparkline(0.68, 0.01),
+  },
+  {
+    id: "litecoin", symbol: "LTC", name: "Litecoin", nameKr: "라이트코인",
+    icon: "Ł", image: "https://assets.coingecko.com/coins/images/2/small/litecoin.png", chain: "ethereum", priceUsd: 88, priceKrw: 88 * KRW_RATE,
+    change24h: 0.6, volume24h: 500000000, sparkline: generateSparkline(88, 1.5),
+  },
+  {
+    id: "ethereum-classic", symbol: "ETC", name: "Ethereum Classic", nameKr: "이더리움 클래식",
+    icon: "⟠", image: "https://assets.coingecko.com/coins/images/453/small/ethereum-classic-logo.png", chain: "ethereum", priceUsd: 25, priceKrw: 25 * KRW_RATE,
+    change24h: -1.3, volume24h: 300000000, sparkline: generateSparkline(25, 0.5),
+  },
+  {
+    id: "monero", symbol: "XMR", name: "Monero", nameKr: "모네로",
+    icon: "⊗", image: "https://assets.coingecko.com/coins/images/69/small/monero_logo.png", chain: "ethereum", priceUsd: 165, priceKrw: 165 * KRW_RATE,
+    change24h: 0.9, volume24h: 150000000, sparkline: generateSparkline(165, 3),
   },
 ];
 
