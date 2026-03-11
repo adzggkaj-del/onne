@@ -1,12 +1,14 @@
 import { NavLink, Outlet } from "react-router-dom";
-import { LayoutDashboard, Users, Coins, Settings, ShoppingCart, ArrowLeft } from "lucide-react";
+import { LayoutDashboard, Users, Coins, Settings, ShoppingCart, ArrowLeft, TrendingUp, TrendingDown, Landmark } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { to: "/admin", icon: LayoutDashboard, label: "대시보드", end: true },
   { to: "/admin/users", icon: Users, label: "사용자" },
   { to: "/admin/coins", icon: Coins, label: "코인 관리" },
-  { to: "/admin/orders", icon: ShoppingCart, label: "주문 관리" },
+  { to: "/admin/orders/buy", icon: TrendingUp, label: "매수 주문" },
+  { to: "/admin/orders/sell", icon: TrendingDown, label: "매도 주문" },
+  { to: "/admin/orders/lending", icon: Landmark, label: "대출 주문" },
   { to: "/admin/settings", icon: Settings, label: "설정" },
 ];
 
