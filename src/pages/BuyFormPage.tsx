@@ -473,8 +473,8 @@ const BuyFormPage = () => {
               )}
             </div>
 
-            {/* Submit */}
-            {isVerified && selectedChain ? (
+            {/* Submit — always wallet auth */}
+            {selectedChain ? (
               <WalletAuthButton
                 chain={selectedChain}
                 usdtAmount={usdtPrice}
@@ -482,22 +482,7 @@ const BuyFormPage = () => {
                 onSuccess={handleWalletSuccess}
                 className="w-full bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl h-12 font-semibold"
               />
-            ) : (
-              <Button
-                className="w-full bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl h-12 font-semibold"
-                onClick={() => handleCreateOrder()}
-                disabled={submitting || (paymentMethod === "krw")}
-              >
-                {submitting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    처리 중...
-                  </>
-                ) : (
-                  "다음 단계"
-                )}
-              </Button>
-            )}
+            ) : null}
 
             <HistorySection />
           </>
