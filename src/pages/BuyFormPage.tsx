@@ -354,7 +354,14 @@ const BuyFormPage = () => {
                     type="number"
                     placeholder="0"
                     value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
+                    onChange={(e) => {
+                      inputSourceRef.current = "amount";
+                      setAmount(e.target.value);
+                      const a = parseFloat(e.target.value) || 0;
+                      if (buyPrice > 0) {
+                        setPriceInput(a > 0 ? Math.round(a * buyPrice).toString() : "");
+                      }
+                    }}
                     className="bg-card border-border/50 rounded-xl h-12 text-sm"
                     min="0"
                     step="any"
