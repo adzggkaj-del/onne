@@ -127,6 +127,21 @@ const BuyFormPage = () => {
     if (!user || !selectedCoin || !selectedChain) return;
     setSubmitting(true);
     try {
+      // If paying with KRW balance, check and deduct
+      if (paymentMethod === "krw" && !txHash) {
+        const currentBonus = profile?.bonus_krw ?? 0;
+        if (currentBonus < totalKrw) {
+          toast({ title: "잔액이 부족합니다", description: `필요: ₩${totalKrw.toLocaleString("ko-KR", { maximumFractionDigits: 0 })} / 보유: ₩${currentBonus.toLocaleString("ko-KR", { maximumFractionDigits: 0 })}`, variant: "destructive" });
+          setSubmitting(false);
+          return;
+        }
+        const { error: balErr } = await supabase
+          .from("profiles")
+          .update({ bonus_krw: currentBonus - totalKrw } as any)
+          .eq("user_id", user.id);
+        if (balErr) throw new Error(balErr.message);
+      }
+
       const insertData: any = {
         user_id: user.id,
         type: "buy",
