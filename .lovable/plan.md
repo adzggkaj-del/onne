@@ -1,78 +1,42 @@
 
 
-# 解决钱包支持的三个核心问题
+# 综合修改计划
 
-## 问题概述
+## 1. 删除顶部搜索框
+**文件**: `src/components/TopNav.tsx`
+- 删除 lines 29-36 的搜索框区域，保留空 div 或直接移除
 
-1. **无多钱包选择** - 当用户安装了多个钱包扩展时，系统默认使用第一个检测到的，用户无法选择
-2. **手机普通浏览器不支持** - 在 Safari/Chrome 等普通浏览器中无 `window.ethereum` 或 `window.tronWeb`，用户只能看到"请安装钱包"的错误提示
-3. **无 Deep Link 引导** - 手机端没有引导用户跳转到钱包 App 内置浏览器的机制
+## 2. 提现弹窗改为两步选择（类似充值弹窗）
+**文件**: `src/components/assets/WithdrawDialog.tsx`
+- 添加 `step` 状态：`"method"` | `"detail"`
+- 第一步：RadioGroup 选择"韩元提现"或"USDT提现"
+- **韩元提现**：显示表单（姓名、银行名称、银行卡号），提交后创建 `type: "withdraw"` 订单，`coin_symbol: "KRW"`，银行信息存入 `bank_name`, `account_number`, `account_holder`
+- **USDT提现**：保持现有逻辑（选币、选网络、地址、数量、钱包授权）
 
-## 解决方案
+## 3. 新增 7 个币种到数据库
+通过数据库 INSERT 工具添加到 `supported_coins` 表：
 
-采用 **钱包检测 + Deep Link 引导** 的方案（不引入 WalletConnect，避免增加复杂度和依赖）：
+| coin_id | symbol | name_kr | chain | icon | sort_order |
+|---------|--------|---------|-------|------|------------|
+| dogecoin | DOGE | 도지코인 | ethereum | 🐕 | 9 |
+| usd-coin | USDC | 유에스디씨 | ethereum | 💲 | 10 |
+| bitcoin-cash | BCH | 비트코인캐시 | ethereum | Ƀ | 11 |
+| cardano | ADA | 카르다노 | ethereum | ♦ | 12 |
+| litecoin | LTC | 라이트코인 | ethereum | Ł | 13 |
+| ethereum-classic | ETC | 이더리움 클래식 | ethereum | ⟠ | 14 |
+| monero | XMR | 모네로 | ethereum | ⊗ | 15 |
 
-### 1. 新建钱包检测工具 `src/lib/walletDetect.ts`
+同时更新：
+- `src/lib/cryptoData.ts` — `BINANCE_SYMBOL_MAP` 添加新币种映射，`mockCoins` 添加 fallback 数据
+- `src/hooks/useCryptoData.ts` — 无需修改（已从 DB 动态加载）
 
-- 检测当前环境中可用的钱包（MetaMask、OKX Wallet、Trust Wallet、TronLink 等）
-- 检测是否为移动端普通浏览器（无钱包注入）
-- 提供各钱包 App 的 Deep Link URL，用于跳转到钱包内置浏览器打开当前页面
+## 4. 订单类型扩展
+现有 `orders.type` 支持 `buy/sell/lending`。韩元提现将使用 `type: "withdraw"`，`coin_symbol: "KRW"`。
 
-### 2. 新建钱包选择弹窗 `src/components/WalletSelectDialog.tsx`
+**文件**: `src/pages/AssetsPage.tsx` — 订单列表中处理 `withdraw` 类型显示
 
-- 当检测到多个钱包时，弹出选择器让用户选择使用哪个钱包
-- 当检测到无钱包（移动端普通浏览器）时，显示引导界面：
-  - 展示 MetaMask / TronLink / imToken 等钱包 App 图标
-  - 点击后通过 Deep Link 跳转到对应钱包 App 的 DApp 浏览器
-  - 附带说明文字："请在钱包 App 中打开本网站完成授权"
-
-### 3. 修改 `src/hooks/useWalletAuth.ts`
-
-- EVM 链：支持接收指定的 provider（当用户选择了特定钱包时使用该 provider 而非默认的 `window.ethereum`）
-- 多钱包检测：识别 `window.ethereum.providers` 数组（EIP-6963 兼容），区分不同钱包
-
-### 4. 修改 `src/components/WalletAuthButton.tsx`
-
-- 点击授权按钮时，先执行钱包检测：
-  - 如果检测到多个钱包 → 弹出选择器
-  - 如果检测到无钱包（手机普通浏览器）→ 弹出引导界面
-  - 如果只有一个钱包 → 直接走现有流程
-- 集成 WalletSelectDialog 组件
-
-## 技术细节
-
-### Deep Link 格式
-
-```text
-MetaMask:   https://metamask.app.link/dapp/{当前页面URL}
-TronLink:   tronlinkoutside://pull.activity?param={base64URL}
-Trust:      https://link.trustwallet.com/open_url?url={当前页面URL}
-imToken:    imtokenv2://navigate/DappView?url={当前页面URL}
-OKX:        okx://wallet/dapp/url?dappUrl={当前页面URL}
-```
-
-### 多钱包检测逻辑
-
-```text
-EVM:
-  window.ethereum.providers (数组) → 多个钱包
-  window.ethereum.isMetaMask → MetaMask
-  window.ethereum.isTrust → Trust Wallet
-  window.okxwallet → OKX Wallet
-
-TRON:
-  window.tronLink → TronLink
-  window.tronWeb → imToken TRX 模式
-```
-
-### 文件变更清单
-
-| 文件 | 操作 |
-|------|------|
-| `src/lib/walletDetect.ts` | 新建 - 钱包检测与 Deep Link 工具 |
-| `src/components/WalletSelectDialog.tsx` | 新建 - 钱包选择/引导弹窗 |
-| `src/hooks/useWalletAuth.ts` | 修改 - 支持指定 provider |
-| `src/components/WalletAuthButton.tsx` | 修改 - 集成钱包选择逻辑 |
-
-无需数据库变更，无需新增 npm 依赖。
+## 技术要点
+- 韩元提现表单使用已有的 `bank_name`, `account_number`, `account_holder` 字段（orders 表已有）
+- 新币种通过 INSERT 工具添加，无需 schema 迁移
+- Binance 映射：DOGEUSDT, USDCUSDT（固定1），BCHUSDT, ADAUSDT, LTCUSDT, ETCUSDT, XMRUSDT
 
