@@ -335,20 +335,6 @@ const WithdrawDialog = ({ open, onOpenChange }: WithdrawDialogProps) => {
                           </div>
                         </div>
 
-                        <div className="flex gap-2.5 rounded-xl bg-destructive/10 border border-destructive/20 p-3.5">
-                          <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
-                          <p className="text-xs text-destructive/80 leading-relaxed">
-                            반드시 <strong>{selectedChain.name}</strong> 네트워크의 주소를 입력하세요. 잘못된 네트워크 주소 입력 시 자산이 손실될 수 있습니다.
-                          </p>
-                        </div>
-
-                        <div className="flex gap-2.5 rounded-xl bg-primary/5 border border-primary/20 p-3.5">
-                          <Shield className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                          <p className="text-xs text-primary/80 leading-relaxed">
-                            출금 요청 시 보안을 위해 지갑 인증이 필요합니다.
-                          </p>
-                        </div>
-
                         <WalletAuthButton
                           chain={selectedChain}
                           usdtAmount={numAmount}
