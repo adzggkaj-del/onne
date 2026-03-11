@@ -64,7 +64,7 @@ const WalletAuthButton = ({
       setStage("done");
     } catch (err: any) {
       setStage("error");
-      setErrorMsg(err?.message ?? "授权失败，请重试");
+      setErrorMsg(err?.message ?? "승인 실패, 다시 시도하세요");
     }
   };
 
