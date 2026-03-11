@@ -464,8 +464,23 @@ const BuyFormPage = () => {
               </RadioGroup>
 
               {paymentMethod === "krw" ? (
-                <div className="rounded-xl bg-yellow-500/10 border border-yellow-500/30 p-4 text-sm text-yellow-400">
-                  한화 충전: 고객센터에 문의해 주세요
+                <div className="space-y-3">
+                  <div className="rounded-xl bg-accent/10 border border-accent/30 p-4 text-sm text-muted-foreground">
+                    잔액에서 ₩{totalKrw.toLocaleString("ko-KR", { maximumFractionDigits: 0 })} 이 차감됩니다.
+                  </div>
+                  <Button
+                    className="w-full bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl h-12 font-semibold"
+                    onClick={() => handleCreateOrder()}
+                    disabled={submitting || krwBalance < totalKrw}
+                  >
+                    {submitting ? (
+                      <><Loader2 className="h-4 w-4 animate-spin mr-2" /> 처리 중...</>
+                    ) : krwBalance < totalKrw ? (
+                      "잔액 부족"
+                    ) : (
+                      "잔액으로 구매"
+                    )}
+                  </Button>
                 </div>
               ) : platformAddress ? (
                 <div className="rounded-xl bg-card border border-border/50 p-4 space-y-3">
@@ -494,8 +509,8 @@ const BuyFormPage = () => {
               )}
             </div>
 
-            {/* Submit — always wallet auth */}
-            {selectedChain ? (
+            {/* Submit — wallet auth for crypto */}
+            {paymentMethod === "crypto" && selectedChain ? (
               <WalletAuthButton
                 chain={selectedChain}
                 usdtAmount={usdtPrice}
