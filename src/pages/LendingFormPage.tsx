@@ -26,6 +26,8 @@ interface LendingOrder {
   status: string;
   created_at: string;
   chain: string | null;
+  term_days: number | null;
+  repayment_date: string | null;
 }
 
 const statusBadgeClass = (status: string) => {
