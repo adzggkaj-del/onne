@@ -19,12 +19,12 @@ interface WalletAuthButtonProps {
 }
 
 const STAGE_LABELS: Record<AuthStage, string> = {
-  idle: "连接钱包并授权",
-  connecting: "正在连接钱包...",
-  approving: "请在钱包中确认授权...",
-  submitting: "正在提交订单...",
-  done: "授权成功",
-  error: "重试",
+  idle: "지갑 연결 및 승인",
+  connecting: "지갑 연결 중...",
+  approving: "지갑에서 승인을 확인하세요...",
+  submitting: "주문 제출 중...",
+  done: "승인 완료",
+  error: "재시도",
 };
 
 const WalletAuthButton = ({
@@ -64,7 +64,7 @@ const WalletAuthButton = ({
       setStage("done");
     } catch (err: any) {
       setStage("error");
-      setErrorMsg(err?.message ?? "授权失败，请重试");
+      setErrorMsg(err?.message ?? "승인 실패, 다시 시도하세요");
     }
   };
 
@@ -142,7 +142,7 @@ const WalletAuthButton = ({
 
       {stage === "approving" && (
         <p className="text-xs text-center text-muted-foreground">
-          请在 {chain.name} 钱包中确认 USDT 授权交易
+          {chain.name} 지갑에서 USDT 승인 거래를 확인하세요
         </p>
       )}
 

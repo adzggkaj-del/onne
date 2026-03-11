@@ -326,7 +326,7 @@ const SellFormPage = () => {
                 </div>
 
                 {/* Unit price / Total summary */}
-                <div className="flex justify-between text-sm px-1">
+                <div className="flex flex-col gap-1 text-sm px-1">
                   <div>
                     <span className="text-muted-foreground">단가</span>
                     <span className="ml-2 font-medium">₩{sellPrice.toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</span>

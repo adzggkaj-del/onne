@@ -306,7 +306,7 @@ const LendingFormPage = () => {
                 />
               ) : null}
 
-              <div className="flex justify-between text-xs text-muted-foreground">
+              <div className="flex flex-col gap-0.5 text-xs text-muted-foreground">
                 <span>USDT 승인 금액 (예상)</span>
                 <span>≈ {usdtAmount.toFixed(2)} USDT</span>
               </div>

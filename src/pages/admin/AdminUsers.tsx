@@ -28,6 +28,8 @@ const AdminUsers = () => {
   const qc = useQueryClient();
   const [bonusTarget, setBonusTarget] = useState<Profile | null>(null);
   const [bonusInput, setBonusInput] = useState("");
+  const [usdtTarget, setUsdtTarget] = useState<Profile | null>(null);
+  const [usdtInput, setUsdtInput] = useState("");
 
   const { data: users = [], isLoading } = useQuery({
     queryKey: ["admin-users"],
@@ -107,6 +109,20 @@ const AdminUsers = () => {
     onError: (e: Error) => toast({ title: "오류", description: e.message, variant: "destructive" }),
   });
 
+  const updateUsdt = useMutation({
+    mutationFn: async ({ id, usdt_balance }: { id: string; usdt_balance: number }) => {
+      const { error } = await supabase.from("profiles").update({ usdt_balance }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-users"] });
+      toast({ title: "USDT 잔액이 업데이트되었습니다" });
+      setUsdtTarget(null);
+      setUsdtInput("");
+    },
+    onError: (e: Error) => toast({ title: "오류", description: e.message, variant: "destructive" }),
+  });
+
   const handleOpenBonus = (user: Profile) => {
     setBonusTarget(user);
     setBonusInput(String(user.bonus_krw ?? 0));
@@ -115,6 +131,16 @@ const AdminUsers = () => {
   const handleSaveBonus = () => {
     if (!bonusTarget) return;
     updateBonus.mutate({ id: bonusTarget.id, bonus_krw: Number(bonusInput) });
+  };
+
+  const handleOpenUsdt = (user: Profile) => {
+    setUsdtTarget(user);
+    setUsdtInput(String(user.usdt_balance ?? 0));
+  };
+
+  const handleSaveUsdt = () => {
+    if (!usdtTarget) return;
+    updateUsdt.mutate({ id: usdtTarget.id, usdt_balance: Number(usdtInput) });
   };
 
   return (
@@ -179,7 +205,19 @@ const AdminUsers = () => {
                     </Button>
                   </div>
                 </TableCell>
-                <TableCell className="text-sm font-medium">{(u.usdt_balance ?? 300).toFixed(2)} USDT</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">{(u.usdt_balance ?? 300).toFixed(2)} USDT</span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                      onClick={() => handleOpenUsdt(u)}
+                    >
+                      <Edit2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </TableCell>
                 <TableCell className="text-xs text-muted-foreground">-</TableCell>
                 <TableCell className="text-xs text-muted-foreground">{new Date(u.created_at).toLocaleDateString("ko-KR")}</TableCell>
               </TableRow>
@@ -213,6 +251,37 @@ const AdminUsers = () => {
               <Button variant="outline" className="flex-1" onClick={() => { setBonusTarget(null); setBonusInput(""); }}>취소</Button>
               <Button className="flex-1" onClick={handleSaveBonus} disabled={updateBonus.isPending}>
                 {updateBonus.isPending ? "저장 중..." : "저장"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+      {/* USDT edit dialog */}
+      <Dialog open={!!usdtTarget} onOpenChange={(o) => { if (!o) { setUsdtTarget(null); setUsdtInput(""); } }}>
+        <DialogContent className="max-w-xs">
+          <DialogHeader>
+            <DialogTitle>USDT 잔액 설정</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">{usdtTarget?.username ?? usdtTarget?.uid_display}</span> 의 USDT 잔액을 설정합니다.
+            </p>
+            <div className="space-y-1.5">
+              <Label htmlFor="usdt-amount">USDT 잔액</Label>
+              <Input
+                id="usdt-amount"
+                type="number"
+                min={0}
+                step="any"
+                value={usdtInput}
+                onChange={(e) => setUsdtInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSaveUsdt()}
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => { setUsdtTarget(null); setUsdtInput(""); }}>취소</Button>
+              <Button className="flex-1" onClick={handleSaveUsdt} disabled={updateUsdt.isPending}>
+                {updateUsdt.isPending ? "저장 중..." : "저장"}
               </Button>
             </div>
           </div>

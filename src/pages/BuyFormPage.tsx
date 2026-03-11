@@ -103,12 +103,7 @@ const BuyFormPage = () => {
 
   const canGoNext = !!selectedCoin && !!selectedChain && numAmount > 0 && walletAddress.trim().length > 0;
 
-  // Auto-calculate price when amount changes
-  useEffect(() => {
-    if (numAmount > 0 && buyPrice > 0) {
-      setPriceInput(Math.round(totalKrw).toString());
-    }
-  }, [amount, buyPrice]);
+  const inputSourceRef = useRef<"price" | "amount" | null>(null);
 
   // Fetch buy history
   useEffect(() => {
@@ -319,7 +314,10 @@ const BuyFormPage = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="funding">
-                        자금 계좌 · 可用 ₩{krwBalance.toLocaleString("ko-KR", { maximumFractionDigits: 0 })} KRW
+                        <div className="flex items-center justify-between w-full gap-4">
+                          <span>자금 계좌</span>
+                          <span className="text-muted-foreground text-xs">사용 가능 ₩{krwBalance.toLocaleString("ko-KR", { maximumFractionDigits: 0 })} KRW</span>
+                        </div>
                       </SelectItem>
                       <SelectItem value="trading">
                         거래 계좌
@@ -336,10 +334,11 @@ const BuyFormPage = () => {
                     placeholder="₩0"
                     value={priceInput}
                     onChange={(e) => {
+                      inputSourceRef.current = "price";
                       setPriceInput(e.target.value);
                       const p = parseFloat(e.target.value) || 0;
                       if (buyPrice > 0) {
-                        setAmount((p / buyPrice).toFixed(4));
+                        setAmount(p > 0 ? (p / buyPrice).toFixed(6) : "");
                       }
                     }}
                     className="bg-card border-destructive rounded-xl h-12 text-sm"
@@ -355,7 +354,14 @@ const BuyFormPage = () => {
                     type="number"
                     placeholder="0"
                     value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
+                    onChange={(e) => {
+                      inputSourceRef.current = "amount";
+                      setAmount(e.target.value);
+                      const a = parseFloat(e.target.value) || 0;
+                      if (buyPrice > 0) {
+                        setPriceInput(a > 0 ? Math.round(a * buyPrice).toString() : "");
+                      }
+                    }}
                     className="bg-card border-border/50 rounded-xl h-12 text-sm"
                     min="0"
                     step="any"
@@ -363,7 +369,7 @@ const BuyFormPage = () => {
                 </div>
 
                 {/* Unit price / Total summary */}
-                <div className="flex justify-between text-sm px-1">
+                <div className="flex flex-col gap-1 text-sm px-1">
                   <div>
                     <span className="text-muted-foreground">단가</span>
                     <span className="ml-2 font-medium">₩{buyPrice.toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</span>
