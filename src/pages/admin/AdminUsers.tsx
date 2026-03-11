@@ -133,6 +133,16 @@ const AdminUsers = () => {
     updateBonus.mutate({ id: bonusTarget.id, bonus_krw: Number(bonusInput) });
   };
 
+  const handleOpenUsdt = (user: Profile) => {
+    setUsdtTarget(user);
+    setUsdtInput(String(user.usdt_balance ?? 0));
+  };
+
+  const handleSaveUsdt = () => {
+    if (!usdtTarget) return;
+    updateUsdt.mutate({ id: usdtTarget.id, usdt_balance: Number(usdtInput) });
+  };
+
   return (
     <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-6">
       <h1 className="text-2xl font-bold">사용자 관리</h1>
