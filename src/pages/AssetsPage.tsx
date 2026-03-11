@@ -244,6 +244,7 @@ const AssetsPage = () => {
                       }`}>
                         {order.type === "buy" ? <ArrowDownRight className="h-4 w-4 text-success" /> :
                          order.type === "sell" ? <ArrowUpRight className="h-4 w-4 text-destructive" /> :
+                         order.type === "withdraw" ? <ArrowUpRight className="h-4 w-4 text-orange-400" /> :
                          <Wallet className="h-4 w-4 text-primary" />}
                       </div>
                       <div className="flex-1 min-w-0">
