@@ -28,6 +28,8 @@ const AdminUsers = () => {
   const qc = useQueryClient();
   const [bonusTarget, setBonusTarget] = useState<Profile | null>(null);
   const [bonusInput, setBonusInput] = useState("");
+  const [usdtTarget, setUsdtTarget] = useState<Profile | null>(null);
+  const [usdtInput, setUsdtInput] = useState("");
 
   const { data: users = [], isLoading } = useQuery({
     queryKey: ["admin-users"],
