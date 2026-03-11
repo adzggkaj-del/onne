@@ -103,12 +103,7 @@ const BuyFormPage = () => {
 
   const canGoNext = !!selectedCoin && !!selectedChain && numAmount > 0 && walletAddress.trim().length > 0;
 
-  // Auto-calculate price when amount changes
-  useEffect(() => {
-    if (numAmount > 0 && buyPrice > 0) {
-      setPriceInput(Math.round(totalKrw).toString());
-    }
-  }, [amount, buyPrice]);
+  const inputSourceRef = useRef<"price" | "amount" | null>(null);
 
   // Fetch buy history
   useEffect(() => {
