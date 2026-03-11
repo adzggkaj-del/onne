@@ -190,7 +190,7 @@ const SellFormPage = () => {
         <div className="text-center py-6 text-sm text-muted-foreground">불러오는 중...</div>
       ) : orders.length === 0 ? (
         <div className="rounded-xl bg-card border border-border/50 p-6 text-center">
-          <p className="text-sm text-muted-foreground">충비 기록이 없습니다</p>
+          <p className="text-sm text-muted-foreground">거래 기록이 없습니다</p>
         </div>
       ) : (
         <div className="rounded-xl bg-card border border-border/50 divide-y divide-border/30 overflow-hidden">
