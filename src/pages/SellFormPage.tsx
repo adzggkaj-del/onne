@@ -182,7 +182,7 @@ const SellFormPage = () => {
   const HistorySection = () => (
     <div className="space-y-3 pt-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold">USDT 충비 기록</h2>
+        <h2 className="text-sm font-semibold">USDT 거래 기록</h2>
         <Download className="h-4 w-4 text-muted-foreground" />
       </div>
 
