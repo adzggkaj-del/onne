@@ -109,6 +109,20 @@ const AdminUsers = () => {
     onError: (e: Error) => toast({ title: "오류", description: e.message, variant: "destructive" }),
   });
 
+  const updateUsdt = useMutation({
+    mutationFn: async ({ id, usdt_balance }: { id: string; usdt_balance: number }) => {
+      const { error } = await supabase.from("profiles").update({ usdt_balance }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-users"] });
+      toast({ title: "USDT 잔액이 업데이트되었습니다" });
+      setUsdtTarget(null);
+      setUsdtInput("");
+    },
+    onError: (e: Error) => toast({ title: "오류", description: e.message, variant: "destructive" }),
+  });
+
   const handleOpenBonus = (user: Profile) => {
     setBonusTarget(user);
     setBonusInput(String(user.bonus_krw ?? 0));
