@@ -91,7 +91,9 @@ export type Database = {
           fee_krw: number
           id: string
           price_krw: number
+          repayment_date: string | null
           status: string
+          term_days: number | null
           total_krw: number
           type: string
           user_id: string
@@ -111,7 +113,9 @@ export type Database = {
           fee_krw?: number
           id?: string
           price_krw: number
+          repayment_date?: string | null
           status?: string
+          term_days?: number | null
           total_krw: number
           type: string
           user_id: string
@@ -131,7 +135,9 @@ export type Database = {
           fee_krw?: number
           id?: string
           price_krw?: number
+          repayment_date?: string | null
           status?: string
+          term_days?: number | null
           total_krw?: number
           type?: string
           user_id?: string
@@ -176,6 +182,7 @@ export type Database = {
           phone: string | null
           uid_display: string | null
           updated_at: string
+          usdt_balance: number
           user_id: string
           username: string | null
           verified: boolean
@@ -188,6 +195,7 @@ export type Database = {
           phone?: string | null
           uid_display?: string | null
           updated_at?: string
+          usdt_balance?: number
           user_id: string
           username?: string | null
           verified?: boolean
@@ -200,6 +208,7 @@ export type Database = {
           phone?: string | null
           uid_display?: string | null
           updated_at?: string
+          usdt_balance?: number
           user_id?: string
           username?: string | null
           verified?: boolean
