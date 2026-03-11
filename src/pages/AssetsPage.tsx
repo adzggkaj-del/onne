@@ -250,7 +250,7 @@ const AssetsPage = () => {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <span className="font-semibold text-sm">
-                            {order.type === "buy" ? "매수" : order.type === "sell" ? "매도" : order.type === "withdraw" ? "출금" : "대출"} {order.coin_symbol !== "KRW" ? order.coin_symbol : ""}
+                            {order.type === "buy" ? "매수" : order.type === "sell" ? "매도" : order.type === "withdraw" ? "출금" : "대출"} {order.coin_symbol !== "KRW" ? order.coin_symbol : "KRW"}
                           </span>
                           <Badge variant="outline" className={`text-[10px] ${
                             order.status === "완료" ? "border-success/30 text-success" :

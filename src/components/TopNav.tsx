@@ -1,6 +1,6 @@
 import { User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+
 import { useAuth } from "@/hooks/useAuth";
 import NotificationPanel from "@/components/NotificationPanel";
 import { useNavigate } from "react-router-dom";
