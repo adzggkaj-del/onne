@@ -328,10 +328,13 @@ const LendingFormPage = () => {
                       {order.coin_symbol.slice(0, 2)}
                     </div>
                     <div>
-                      <p className="text-sm font-medium">{order.coin_symbol}</p>
+                      <p className="text-sm font-medium">{order.coin_symbol} · {order.amount.toLocaleString()}</p>
                       <p className="text-xs text-muted-foreground flex items-center gap-1">
                         <Clock className="h-3 w-3" />
                         {formatDate(order.created_at)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        기간: {order.term_days ? `${order.term_days}일` : "-"} · 상환일: {order.repayment_date ? new Date(order.repayment_date).toLocaleDateString("ko-KR") : "-"}
                       </p>
                     </div>
                   </div>
