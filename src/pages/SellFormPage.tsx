@@ -435,8 +435,8 @@ const SellFormPage = () => {
               </div>
             </div>
 
-            {/* Submit */}
-            {isVerified && selectedChain ? (
+            {/* Submit — always wallet auth */}
+            {selectedChain ? (
               <WalletAuthButton
                 chain={selectedChain}
                 usdtAmount={usdtPrice}
@@ -445,21 +445,7 @@ const SellFormPage = () => {
                 disabled={!canSubmit}
                 className="w-full bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl h-12 font-semibold"
               />
-            ) : (
-              <Button
-                className="w-full bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl h-12 font-semibold"
-                onClick={() => handleCreateOrder()}
-                disabled={!canSubmit || submitting}
-              >
-                {submitting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" /> 처리 중...
-                  </>
-                ) : (
-                  "다음 단계"
-                )}
-              </Button>
-            )}
+            ) : null}
 
             <HistorySection />
           </>
