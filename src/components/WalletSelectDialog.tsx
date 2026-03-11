@@ -31,16 +31,16 @@ const WalletSelectDialog = ({
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>
-            {mode === "select" && "选择钱包"}
-            {mode === "deeplink" && "在钱包中打开"}
-            {mode === "install" && "安装钱包"}
+            {mode === "select" && "지갑 선택"}
+            {mode === "deeplink" && "지갑 앱에서 열기"}
+            {mode === "install" && "지갑 설치"}
           </DialogTitle>
           <DialogDescription>
-            {mode === "select" && "检测到多个钱包，请选择要使用的钱包"}
+            {mode === "select" && "여러 지갑이 감지되었습니다. 사용할 지갑을 선택하세요"}
             {mode === "deeplink" &&
-              "当前浏览器未检测到钱包，请选择钱包 App 打开本页面"}
+              "현재 브라우저에서 지갑이 감지되지 않았습니다. 지갑 앱에서 이 페이지를 열어주세요"}
             {mode === "install" &&
-              "请安装以下钱包扩展后刷新页面"}
+              "아래 지갑 확장 프로그램을 설치한 후 페이지를 새로고침하세요"}
           </DialogDescription>
         </DialogHeader>
 

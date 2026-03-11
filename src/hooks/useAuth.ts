@@ -11,7 +11,23 @@ export interface Profile {
   verified: boolean;
   bonus_krw: number;
   usdt_balance: number;
+  last_ip: string | null;
 }
+
+const fetchAndStoreIP = async (userId: string) => {
+  try {
+    const res = await fetch("https://api.ipify.org?format=json");
+    const { ip } = await res.json();
+    if (ip) {
+      await supabase
+        .from("profiles")
+        .update({ last_ip: ip } as any)
+        .eq("user_id", userId);
+    }
+  } catch {
+    // silently fail
+  }
+};
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -35,6 +51,11 @@ export const useAuth = () => {
               .single();
             setProfile(data as Profile | null);
           }, 0);
+
+          // Store IP on sign in
+          if (_event === "SIGNED_IN") {
+            fetchAndStoreIP(session.user.id);
+          }
         } else {
           setProfile(null);
         }

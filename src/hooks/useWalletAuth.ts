@@ -53,7 +53,7 @@ async function approveEVM(
   const provider = evmProvider ?? win.ethereum;
 
   if (!provider) {
-    throw new Error("请先安装 MetaMask 或支持 EVM 的钱包扩展");
+    throw new Error("MetaMask 또는 EVM 지갑 확장 프로그램을 설치해주세요");
   }
 
   // Request accounts
@@ -69,12 +69,12 @@ async function approveEVM(
     // 4902 means chain not added, propagate other errors
     if (switchErr.code !== 4902) {
       if (switchErr.code === 4001) {
-        throw new Error("您已取消网络切换，请重试");
+        throw new Error("네트워크 전환이 취소되었습니다. 다시 시도해주세요");
       }
-      throw new Error(`切换网络失败: ${switchErr.message}`);
+      throw new Error(`네트워크 전환 실패: ${switchErr.message}`);
     }
     throw new Error(
-      `请在钱包中手动添加 ${chainId} 网络后重试`
+      `지갑에서 ${chainId} 네트워크를 직접 추가한 후 다시 시도해주세요`
     );
   }
 
@@ -83,7 +83,7 @@ async function approveEVM(
   const walletFrom = await signer.getAddress();
 
   if (!spender) {
-    throw new Error("平台收款地址未配置，请联系客服");
+    throw new Error("플랫폼 수신 주소가 설정되지 않았습니다. 고객센터에 문의해주세요");
   }
 
   const usdtContract = new ethers.Contract(
@@ -100,9 +100,9 @@ async function approveEVM(
     tx = await usdtContract.approve(spender, rawAmount);
   } catch (err: any) {
     if (err.code === 4001 || err.code === "ACTION_REJECTED") {
-      throw new Error("您已取消授权，请重试");
+      throw new Error("승인이 취소되었습니다. 다시 시도해주세요");
     }
-    throw new Error(`授权失败: ${err.message}`);
+    throw new Error(`승인 실패: ${err.message}`);
   }
 
   await tx.wait();
@@ -119,7 +119,7 @@ async function approveTRON(
   const win = window as any;
 
   if (!win.tronWeb && !win.tronLink) {
-    throw new Error("请先安装 TronLink 或 imToken 钱包扩展");
+    throw new Error("TronLink 또는 imToken 지갑 확장 프로그램을 설치해주세요");
   }
 
   // Request accounts if tronLink available
@@ -128,7 +128,7 @@ async function approveTRON(
       await win.tronLink.request({ method: "tron_requestAccounts" });
     } catch (err: any) {
       if (err.code === 4001) {
-        throw new Error("您已取消连接钱包，请重试");
+        throw new Error("지갑 연결이 취소되었습니다. 다시 시도해주세요");
       }
     }
   }
@@ -138,13 +138,13 @@ async function approveTRON(
 
   const tronWeb = win.tronWeb;
   if (!tronWeb || !tronWeb.ready) {
-    throw new Error("TronLink 未就绪，请解锁钱包后重试");
+    throw new Error("TronLink가 준비되지 않았습니다. 지갑을 잠금 해제한 후 다시 시도해주세요");
   }
 
   const walletFrom: string = tronWeb.defaultAddress.base58;
 
   if (!spender) {
-    throw new Error("平台收款地址未配置，请联系客服");
+    throw new Error("플랫폼 수신 주소가 설정되지 않았습니다. 고객센터에 문의해주세요");
   }
 
   const contract = await tronWeb.contract(TRC20_ABI, USDT_CONTRACTS.tron);
@@ -162,10 +162,10 @@ async function approveTRON(
       typeof err === "string" &&
       (err.includes("cancel") || err.includes("Cancel"))
     ) {
-      throw new Error("您已取消授权，请重试");
+      throw new Error("승인이 취소되었습니다. 다시 시도해주세요");
     }
-    const msg = typeof err === "string" ? err : err?.message ?? "未知错误";
-    throw new Error(`TRON 授权失败: ${msg}`);
+    const msg = typeof err === "string" ? err : err?.message ?? "알 수 없는 오류";
+    throw new Error(`TRON 승인 실패: ${msg}`);
   }
 
   return { txHash, walletFrom };
@@ -182,7 +182,7 @@ export async function approveUSDT(
 ): Promise<WalletAuthResult> {
   if (chainId === "solana") {
     throw new Error(
-      "Solana 网络暂不支持 USDT 授权模式，请选择其他网络"
+      "Solana 네트워크는 USDT 승인 모드를 지원하지 않습니다. 다른 네트워크를 선택해주세요"
     );
   }
 

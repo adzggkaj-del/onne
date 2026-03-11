@@ -197,9 +197,9 @@ const SellFormPage = () => {
           {/* Header */}
           <div className="grid grid-cols-4 px-4 py-2.5 text-xs text-muted-foreground">
             <span>시간</span>
-            <span className="text-center">충비 수량</span>
+            <span className="text-center">거래 수량</span>
             <span className="text-center">총액(KRW)</span>
-            <span className="text-right">충비 상태</span>
+            <span className="text-right">거래 상태</span>
           </div>
           {orders.map((order) => (
             <div key={order.id} className="grid grid-cols-4 px-4 py-3 text-sm items-center">
