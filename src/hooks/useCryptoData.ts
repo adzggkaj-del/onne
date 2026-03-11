@@ -66,10 +66,10 @@ const fetchCoins = async (krwRate: number): Promise<CoinData[]> => {
     let change24h: number;
     let volume24h: number;
 
-    if (sc.coin_id === "tether") {
+    if (sc.coin_id === "tether" || sc.coin_id === "usd-coin") {
       priceUsd = 1.0;
       change24h = 0.01;
-      volume24h = 62000000000;
+      volume24h = sc.coin_id === "tether" ? 62000000000 : 8000000000;
     } else if (ticker) {
       priceUsd = parseFloat(ticker.lastPrice);
       change24h = parseFloat(ticker.priceChangePercent);
