@@ -19,6 +19,8 @@ interface Profile {
   uid_display: string | null;
   verified: boolean;
   bonus_krw: number;
+  usdt_balance: number;
+  phone: string | null;
   created_at: string;
 }
 
@@ -36,14 +38,25 @@ const AdminUsers = () => {
     },
   });
 
-  // Fetch admin roles for all users
+  // Fetch emails via edge function
+  const { data: emailMap = {} } = useQuery({
+    queryKey: ["admin-user-emails"],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("get-user-emails");
+      if (error) throw error;
+      const map: Record<string, string> = {};
+      (data as { id: string; email: string }[])?.forEach((u) => {
+        map[u.id] = u.email;
+      });
+      return map;
+    },
+  });
+
+  // Fetch admin roles
   const { data: adminRoles = [] } = useQuery({
     queryKey: ["admin-user-roles"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("user_roles")
-        .select("user_id, role")
-        .eq("role", "admin");
+      const { data, error } = await supabase.from("user_roles").select("user_id, role").eq("role", "admin");
       if (error) throw error;
       return (data ?? []) as { user_id: string; role: string }[];
     },
@@ -105,32 +118,38 @@ const AdminUsers = () => {
   };
 
   return (
-    <div className="p-4 md:p-6 max-w-5xl mx-auto space-y-6">
+    <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-6">
       <h1 className="text-2xl font-bold">사용자 관리</h1>
       <div className="rounded-lg border border-border/50 overflow-auto">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>UID</TableHead>
+              <TableHead>이메일</TableHead>
               <TableHead>사용자명</TableHead>
+              <TableHead>전화번호</TableHead>
               <TableHead>⭐ 星표</TableHead>
               <TableHead>관리자</TableHead>
-              <TableHead>플랫폼 보너스</TableHead>
+              <TableHead>KRW 잔액</TableHead>
+              <TableHead>USDT 잔액</TableHead>
+              <TableHead>IP</TableHead>
               <TableHead>가입일</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">로딩 중...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground">로딩 중...</TableCell></TableRow>
             ) : users.map((u) => (
               <TableRow key={u.id}>
                 <TableCell className="font-mono text-xs">{u.uid_display}</TableCell>
+                <TableCell className="text-xs">{emailMap[u.user_id] ?? "-"}</TableCell>
                 <TableCell>{u.username ?? "-"}</TableCell>
+                <TableCell className="text-xs">{u.phone ?? "-"}</TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
                     <Switch checked={u.verified} onCheckedChange={(v) => toggleVerified.mutate({ id: u.id, verified: v })} />
                     <Badge variant={u.verified ? "default" : "secondary"} className="text-xs gap-1">
-                      {u.verified ? <><Star className="h-3 w-3" /> 星표</> : "普通"}
+                      {u.verified ? <><Star className="h-3 w-3" /> 星表</> : "普通"}
                     </Badge>
                   </div>
                 </TableCell>
@@ -160,6 +179,8 @@ const AdminUsers = () => {
                     </Button>
                   </div>
                 </TableCell>
+                <TableCell className="text-sm font-medium">{(u.usdt_balance ?? 300).toFixed(2)} USDT</TableCell>
+                <TableCell className="text-xs text-muted-foreground">-</TableCell>
                 <TableCell className="text-xs text-muted-foreground">{new Date(u.created_at).toLocaleDateString("ko-KR")}</TableCell>
               </TableRow>
             ))}

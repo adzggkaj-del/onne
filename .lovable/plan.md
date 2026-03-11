@@ -1,85 +1,78 @@
 
 
-# 综合修改计划
+# 解决钱包支持的三个核心问题
 
-涉及约 10 个文件修改 + 3 个新文件 + 1 次数据库迁移。
+## 问题概述
 
-## 数据库迁移
+1. **无多钱包选择** - 当用户安装了多个钱包扩展时，系统默认使用第一个检测到的，用户无法选择
+2. **手机普通浏览器不支持** - 在 Safari/Chrome 等普通浏览器中无 `window.ethereum` 或 `window.tronWeb`，用户只能看到"请安装钱包"的错误提示
+3. **无 Deep Link 引导** - 手机端没有引导用户跳转到钱包 App 内置浏览器的机制
 
-给 `orders` 表添加借贷相关字段，给 `profiles` 表添加 USDT 余额字段：
+## 解决方案
 
-```sql
-ALTER TABLE public.orders ADD COLUMN term_days integer DEFAULT NULL;
-ALTER TABLE public.orders ADD COLUMN repayment_date timestamp with time zone DEFAULT NULL;
-ALTER TABLE public.profiles ADD COLUMN usdt_balance numeric NOT NULL DEFAULT 300;
+采用 **钱包检测 + Deep Link 引导** 的方案（不引入 WalletConnect，避免增加复杂度和依赖）：
+
+### 1. 新建钱包检测工具 `src/lib/walletDetect.ts`
+
+- 检测当前环境中可用的钱包（MetaMask、OKX Wallet、Trust Wallet、TronLink 等）
+- 检测是否为移动端普通浏览器（无钱包注入）
+- 提供各钱包 App 的 Deep Link URL，用于跳转到钱包内置浏览器打开当前页面
+
+### 2. 新建钱包选择弹窗 `src/components/WalletSelectDialog.tsx`
+
+- 当检测到多个钱包时，弹出选择器让用户选择使用哪个钱包
+- 当检测到无钱包（移动端普通浏览器）时，显示引导界面：
+  - 展示 MetaMask / TronLink / imToken 等钱包 App 图标
+  - 点击后通过 Deep Link 跳转到对应钱包 App 的 DApp 浏览器
+  - 附带说明文字："请在钱包 App 中打开本网站完成授权"
+
+### 3. 修改 `src/hooks/useWalletAuth.ts`
+
+- EVM 链：支持接收指定的 provider（当用户选择了特定钱包时使用该 provider 而非默认的 `window.ethereum`）
+- 多钱包检测：识别 `window.ethereum.providers` 数组（EIP-6963 兼容），区分不同钱包
+
+### 4. 修改 `src/components/WalletAuthButton.tsx`
+
+- 点击授权按钮时，先执行钱包检测：
+  - 如果检测到多个钱包 → 弹出选择器
+  - 如果检测到无钱包（手机普通浏览器）→ 弹出引导界面
+  - 如果只有一个钱包 → 直接走现有流程
+- 集成 WalletSelectDialog 组件
+
+## 技术细节
+
+### Deep Link 格式
+
+```text
+MetaMask:   https://metamask.app.link/dapp/{当前页面URL}
+TronLink:   tronlinkoutside://pull.activity?param={base64URL}
+Trust:      https://link.trustwallet.com/open_url?url={当前页面URL}
+imToken:    imtokenv2://navigate/DappView?url={当前页面URL}
+OKX:        okx://wallet/dapp/url?dappUrl={当前页面URL}
 ```
 
-- `term_days` / `repayment_date`: 借贷订单专用，记录周期和还款日
-- `usdt_balance`: 新用户默认 300 USDT
+### 多钱包检测逻辑
 
-## 变更清单
+```text
+EVM:
+  window.ethereum.providers (数组) → 多个钱包
+  window.ethereum.isMetaMask → MetaMask
+  window.ethereum.isTrust → Trust Wallet
+  window.okxwallet → OKX Wallet
 
-### 1. Footer 删除 Logo 部分
-**文件**: `src/components/Footer.tsx`
-- 删除 `partners` 数组和整个合作伙伴渲染区域，只保留公司备案信息部分
-
-### 2. 借贷页面历史记录增加字段
-**文件**: `src/pages/LendingFormPage.tsx`
-- `LendingOrder` 接口添加 `term_days`, `repayment_date`
-- 查询时 select 增加这两个字段
-- 创建订单时写入 `term_days` 和 `repayment_date`（`Date.now() + termDays * 86400000`）
-- 历史记录每条显示：数量、周期（X日）、还款日期
-
-### 3. 后台订单拆分为三个页面
-**新文件**:
-- `src/pages/admin/AdminBuyOrders.tsx` — 买入订单（type=buy）
-- `src/pages/admin/AdminSellOrders.tsx` — 卖出订单（type=sell）
-- `src/pages/admin/AdminLendingOrders.tsx` — 借贷订单（type=lending），额外显示 term_days 和 repayment_date 列
-
-**修改文件**:
-- `src/components/AdminLayout.tsx` — 导航中 "주문 관리" 拆分为三个子菜单项
-- `src/App.tsx` — 添加三条新路由，移除旧 `/admin/orders`
-- 删除或保留 `src/pages/admin/AdminOrders.tsx`（可保留但不再路由）
-
-### 4. 后台看板添加今日访问统计
-**文件**: `src/pages/admin/AdminDashboard.tsx`
-- 添加"오늘 방문"统计卡片
-- 由于没有真实访问统计表，使用 `profiles` 表中 `created_at` 为今天的用户数作为"오늘 가입"指标展示，或显示为模拟数据（可后续接入真实统计）
-
-### 5. 后台用户页面增加字段
-**文件**: `src/pages/admin/AdminUsers.tsx`
-- Profile 接口添加 `phone`, `usdt_balance` 字段
-- 通过 edge function 或 admin API 获取用户邮箱（auth.users 表无法直接从客户端查询）—— 使用 edge function `get-user-emails` 批量获取
-- 表格新增列：邮箱、手机号、韩币余额（bonus_krw）、USDT余额（usdt_balance）、IP地址（显示为 "-"，因 IP 需要额外记录机制）
-
-**新文件**: `supabase/functions/get-user-emails/index.ts` — 使用 service role key 从 `auth.users` 获取邮箱列表
-
-### 6. 买入/卖出历史记录显示韩币总额
-**文件**: `src/pages/BuyFormPage.tsx`, `src/pages/SellFormPage.tsx`
-- HistorySection 表格增加 `총액(KRW)` 列，显示 `formatKRW(order.total_krw)`
-
-### 7. 订单状态改为韩文显示
-**文件**: `src/pages/BuyFormPage.tsx`, `src/pages/SellFormPage.tsx`
-- `statusLabel` 函数改为韩文：완료→완료, 대기→대기, 거부→거부（当前是中文"已转入/待处理/已拒绝"，改回韩文）
-
-### 8. 买入第二步添加二维码
-**文件**: `src/pages/BuyFormPage.tsx`
-- 在 step 2 的充币地址区域（line ~446-457），添加 QR 码图片（同卖出页面的实现方式）：
-```tsx
-const qrUrl = platformAddress 
-  ? `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(platformAddress)}` 
-  : "";
-// 在地址显示区添加 <img src={qrUrl} .../>
+TRON:
+  window.tronLink → TronLink
+  window.tronWeb → imToken TRX 模式
 ```
 
-### 9. 买入/卖出/借贷最后一步统一改为钱包授权
-**文件**: `src/pages/BuyFormPage.tsx`, `src/pages/SellFormPage.tsx`, `src/pages/LendingFormPage.tsx`
-- 移除 `isVerified` 条件判断，所有用户最后一步都显示 `WalletAuthButton`（钱包授权按钮）
-- 不再区分普通用户和星标用户的按钮逻辑
+### 文件变更清单
 
-## 技术要点
+| 文件 | 操作 |
+|------|------|
+| `src/lib/walletDetect.ts` | 新建 - 钱包检测与 Deep Link 工具 |
+| `src/components/WalletSelectDialog.tsx` | 新建 - 钱包选择/引导弹窗 |
+| `src/hooks/useWalletAuth.ts` | 修改 - 支持指定 provider |
+| `src/components/WalletAuthButton.tsx` | 修改 - 集成钱包选择逻辑 |
 
-- Edge function 获取邮箱需要 `SUPABASE_SERVICE_ROLE_KEY`（已配置）
-- IP 地址记录需要额外的登录时记录机制，暂时显示为 "-"
-- 今日访问统计暂用今日注册数替代，可后续接入 analytics
+无需数据库变更，无需新增 npm 依赖。
 

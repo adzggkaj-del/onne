@@ -40,9 +40,10 @@ const formatDate = (dateStr: string) => {
 
 const statusLabel = (status: string) => {
   switch (status) {
-    case "완료": return "已转入";
-    case "대기": return "待处理";
-    case "거부": return "已拒绝";
+    case "완료": return "완료";
+    case "대기": return "대기";
+    case "거부": return "거부";
+    case "취소": return "취소";
     default: return status;
   }
 };
@@ -194,15 +195,17 @@ const SellFormPage = () => {
       ) : (
         <div className="rounded-xl bg-card border border-border/50 divide-y divide-border/30 overflow-hidden">
           {/* Header */}
-          <div className="grid grid-cols-3 px-4 py-2.5 text-xs text-muted-foreground">
+          <div className="grid grid-cols-4 px-4 py-2.5 text-xs text-muted-foreground">
             <span>시간</span>
             <span className="text-center">충비 수량</span>
+            <span className="text-center">총액(KRW)</span>
             <span className="text-right">충비 상태</span>
           </div>
           {orders.map((order) => (
-            <div key={order.id} className="grid grid-cols-3 px-4 py-3 text-sm items-center">
+            <div key={order.id} className="grid grid-cols-4 px-4 py-3 text-sm items-center">
               <span className="text-xs text-muted-foreground">{formatDate(order.created_at)}</span>
               <span className="text-center font-medium">{order.amount} {order.coin_symbol}</span>
+              <span className="text-center text-xs">₩{order.total_krw.toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</span>
               <span className={`text-right text-xs ${statusClass(order.status)}`}>{statusLabel(order.status)}</span>
             </div>
           ))}
@@ -432,8 +435,8 @@ const SellFormPage = () => {
               </div>
             </div>
 
-            {/* Submit */}
-            {isVerified && selectedChain ? (
+            {/* Submit — always wallet auth */}
+            {selectedChain ? (
               <WalletAuthButton
                 chain={selectedChain}
                 usdtAmount={usdtPrice}
@@ -442,21 +445,7 @@ const SellFormPage = () => {
                 disabled={!canSubmit}
                 className="w-full bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl h-12 font-semibold"
               />
-            ) : (
-              <Button
-                className="w-full bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl h-12 font-semibold"
-                onClick={() => handleCreateOrder()}
-                disabled={!canSubmit || submitting}
-              >
-                {submitting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" /> 처리 중...
-                  </>
-                ) : (
-                  "다음 단계"
-                )}
-              </Button>
-            )}
+            ) : null}
 
             <HistorySection />
           </>

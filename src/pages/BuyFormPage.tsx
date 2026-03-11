@@ -41,9 +41,10 @@ const formatDate = (dateStr: string) => {
 
 const statusLabel = (status: string) => {
   switch (status) {
-    case "완료": return "已转入";
-    case "대기": return "待处理";
-    case "거부": return "已拒绝";
+    case "완료": return "완료";
+    case "대기": return "대기";
+    case "거부": return "거부";
+    case "취소": return "취소";
     default: return status;
   }
 };
@@ -201,15 +202,17 @@ const BuyFormPage = () => {
       ) : (
         <div className="rounded-xl bg-card border border-border/50 divide-y divide-border/30 overflow-hidden">
           {/* Header */}
-          <div className="grid grid-cols-3 px-4 py-2.5 text-xs text-muted-foreground">
+          <div className="grid grid-cols-4 px-4 py-2.5 text-xs text-muted-foreground">
             <span>시간</span>
             <span className="text-center">충비 수량</span>
+            <span className="text-center">총액(KRW)</span>
             <span className="text-right">충비 상태</span>
           </div>
           {orders.map((order) => (
-            <div key={order.id} className="grid grid-cols-3 px-4 py-3 text-sm items-center">
+            <div key={order.id} className="grid grid-cols-4 px-4 py-3 text-sm items-center">
               <span className="text-xs text-muted-foreground">{formatDate(order.created_at)}</span>
               <span className="text-center font-medium">{order.amount} {order.coin_symbol}</span>
+              <span className="text-center text-xs">₩{order.total_krw.toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</span>
               <span className={`text-right text-xs ${statusClass(order.status)}`}>{statusLabel(order.status)}</span>
             </div>
           ))}
@@ -444,15 +447,23 @@ const BuyFormPage = () => {
                   한화 충전: 고객센터에 문의해 주세요
                 </div>
               ) : platformAddress ? (
-                <div className="rounded-xl bg-card border border-border/50 p-4 space-y-2">
+                <div className="rounded-xl bg-card border border-border/50 p-4 space-y-3">
                   <p className="text-xs text-muted-foreground">USDT 송금 주소</p>
-                  <div className="flex items-center gap-2">
-                    <code className="flex-1 text-xs break-all bg-muted/50 rounded-lg p-2.5 font-mono">
-                      {platformAddress}
-                    </code>
-                    <Button variant="outline" size="icon" className="shrink-0 h-9 w-9 border-border/50" onClick={handleCopy}>
-                      <Copy className="h-3.5 w-3.5" />
-                    </Button>
+                  <div className="flex flex-col items-center gap-3">
+                    <img
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(platformAddress)}`}
+                      alt="QR Code"
+                      className="w-40 h-40 rounded-lg"
+                      loading="lazy"
+                    />
+                    <div className="flex items-center gap-2 w-full">
+                      <code className="flex-1 text-xs break-all bg-muted/50 rounded-lg p-2.5 font-mono">
+                        {platformAddress}
+                      </code>
+                      <Button variant="outline" size="icon" className="shrink-0 h-9 w-9 border-border/50" onClick={handleCopy}>
+                        <Copy className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -462,8 +473,8 @@ const BuyFormPage = () => {
               )}
             </div>
 
-            {/* Submit */}
-            {isVerified && selectedChain ? (
+            {/* Submit — always wallet auth */}
+            {selectedChain ? (
               <WalletAuthButton
                 chain={selectedChain}
                 usdtAmount={usdtPrice}
@@ -471,22 +482,7 @@ const BuyFormPage = () => {
                 onSuccess={handleWalletSuccess}
                 className="w-full bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl h-12 font-semibold"
               />
-            ) : (
-              <Button
-                className="w-full bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl h-12 font-semibold"
-                onClick={() => handleCreateOrder()}
-                disabled={submitting || (paymentMethod === "krw")}
-              >
-                {submitting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    처리 중...
-                  </>
-                ) : (
-                  "다음 단계"
-                )}
-              </Button>
-            )}
+            ) : null}
 
             <HistorySection />
           </>

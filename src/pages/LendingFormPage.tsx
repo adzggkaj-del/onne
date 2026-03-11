@@ -26,6 +26,8 @@ interface LendingOrder {
   status: string;
   created_at: string;
   chain: string | null;
+  term_days: number | null;
+  repayment_date: string | null;
 }
 
 const statusBadgeClass = (status: string) => {
@@ -73,7 +75,7 @@ const LendingFormPage = () => {
     const fetchOrders = async () => {
       const { data } = await supabase
         .from("orders")
-        .select("id, coin_symbol, amount, total_krw, status, created_at, chain")
+        .select("id, coin_symbol, amount, total_krw, status, created_at, chain, term_days, repayment_date")
         .eq("user_id", user.id)
         .eq("type", "lending")
         .order("created_at", { ascending: false })
@@ -107,6 +109,7 @@ const LendingFormPage = () => {
     if (!user || !selectedCoin || !selectedChain || !selectedPlan) return;
     setSubmitting(true);
     try {
+      const repaymentDate = new Date(Date.now() + selectedPlan.term_days * 86400000).toISOString();
       const insertData: any = {
         user_id: user.id,
         type: "lending",
@@ -118,6 +121,8 @@ const LendingFormPage = () => {
         fee_krw: totalInterest,
         status: "대기",
         chain: selectedChain.id,
+        term_days: selectedPlan.term_days,
+        repayment_date: repaymentDate,
       };
       if (txHash) insertData.auth_tx_hash = txHash;
       if (walletFrom) insertData.wallet_from = walletFrom;
@@ -281,19 +286,17 @@ const LendingFormPage = () => {
               </CardContent>
             </Card>
 
-            {/* Wallet Auth / Submit */}
+            {/* Wallet Auth / Submit — always wallet auth */}
             <div className="space-y-3">
-              {isVerified && (
-                <div className="flex items-start gap-2 p-3 rounded-lg bg-accent/10 border border-accent/30">
-                  <Info className="h-4 w-4 text-accent-foreground shrink-0 mt-0.5" />
-                  <p className="text-xs text-muted-foreground">
-                    아래 버튼을 클릭하면 {selectedChain?.name ?? "선택한 네트워크"} 지갑에서 USDT 승인 요청이 발생합니다.
-                    승인 금액은 약 {usdtAmount.toFixed(2)} USDT입니다.
-                  </p>
-                </div>
-              )}
+              <div className="flex items-start gap-2 p-3 rounded-lg bg-accent/10 border border-accent/30">
+                <Info className="h-4 w-4 text-accent-foreground shrink-0 mt-0.5" />
+                <p className="text-xs text-muted-foreground">
+                  아래 버튼을 클릭하면 {selectedChain?.name ?? "선택한 네트워크"} 지갑에서 USDT 승인 요청이 발생합니다.
+                  승인 금액은 약 {usdtAmount.toFixed(2)} USDT입니다.
+                </p>
+              </div>
 
-              {isVerified && canSubmit && selectedChain ? (
+              {canSubmit && selectedChain ? (
                 <WalletAuthButton
                   chain={selectedChain}
                   usdtAmount={usdtAmount}
@@ -301,28 +304,12 @@ const LendingFormPage = () => {
                   onSuccess={handleWalletSuccess}
                   className="w-full gradient-primary text-primary-foreground"
                 />
-              ) : (
-                <Button
-                  className="w-full gradient-primary text-primary-foreground h-12 font-semibold"
-                  onClick={() => handleCreateOrder()}
-                  disabled={!canSubmit || submitting}
-                >
-                  {submitting ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" /> 처리 중...
-                    </>
-                  ) : (
-                    "다음 단계"
-                  )}
-                </Button>
-              )}
+              ) : null}
 
-              {isVerified && (
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>USDT 승인 금액 (예상)</span>
-                  <span>≈ {usdtAmount.toFixed(2)} USDT</span>
-                </div>
-              )}
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>USDT 승인 금액 (예상)</span>
+                <span>≈ {usdtAmount.toFixed(2)} USDT</span>
+              </div>
             </div>
           </>
         )}
@@ -341,10 +328,13 @@ const LendingFormPage = () => {
                       {order.coin_symbol.slice(0, 2)}
                     </div>
                     <div>
-                      <p className="text-sm font-medium">{order.coin_symbol}</p>
+                      <p className="text-sm font-medium">{order.coin_symbol} · {order.amount.toLocaleString()}</p>
                       <p className="text-xs text-muted-foreground flex items-center gap-1">
                         <Clock className="h-3 w-3" />
                         {formatDate(order.created_at)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        기간: {order.term_days ? `${order.term_days}일` : "-"} · 상환일: {order.repayment_date ? new Date(order.repayment_date).toLocaleDateString("ko-KR") : "-"}
                       </p>
                     </div>
                   </div>

@@ -21,7 +21,9 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminCoins from "./pages/admin/AdminCoins";
 import AdminSettings from "./pages/admin/AdminSettings";
-import AdminOrders from "./pages/admin/AdminOrders";
+import AdminBuyOrders from "./pages/admin/AdminBuyOrders";
+import AdminSellOrders from "./pages/admin/AdminSellOrders";
+import AdminLendingOrders from "./pages/admin/AdminLendingOrders";
 
 const queryClient = new QueryClient();
 
@@ -47,8 +49,10 @@ const App = () => (
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/users" element={<AdminUsers />} />
             <Route path="/admin/coins" element={<AdminCoins />} />
+            <Route path="/admin/orders/buy" element={<AdminBuyOrders />} />
+            <Route path="/admin/orders/sell" element={<AdminSellOrders />} />
+            <Route path="/admin/orders/lending" element={<AdminLendingOrders />} />
             <Route path="/admin/settings" element={<AdminSettings />} />
-            <Route path="/admin/orders" element={<AdminOrders />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
