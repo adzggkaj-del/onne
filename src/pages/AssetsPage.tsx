@@ -76,6 +76,7 @@ const AssetsPage = () => {
     : [];
 
   const bonusKrw = profile?.bonus_krw ?? 0;
+  const usdtBalance = profile?.usdt_balance ?? 0;
   const filteredOrders = orderFilter === "all" ? orders : orders.filter((o) => o.type === orderFilter);
   const displayName = profile?.username || user?.email?.split("@")[0] || "사용자";
   const uidDisplay = profile?.uid_display || "CX-000000";
