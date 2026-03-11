@@ -334,10 +334,11 @@ const BuyFormPage = () => {
                     placeholder="₩0"
                     value={priceInput}
                     onChange={(e) => {
+                      inputSourceRef.current = "price";
                       setPriceInput(e.target.value);
                       const p = parseFloat(e.target.value) || 0;
                       if (buyPrice > 0) {
-                        setAmount((p / buyPrice).toFixed(4));
+                        setAmount(p > 0 ? (p / buyPrice).toFixed(6) : "");
                       }
                     }}
                     className="bg-card border-destructive rounded-xl h-12 text-sm"
