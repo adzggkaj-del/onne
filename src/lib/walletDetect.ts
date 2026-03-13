@@ -48,6 +48,13 @@ function getTronDeepLinks(): WalletDeepLink[] {
       url: `imtokenv2://navigate/DappView?url=${currentUrl}`,
       type: "tron",
     },
+    {
+      id: "tokenpocket",
+      name: "TokenPocket",
+      icon: "🟣",
+      url: `tpoutside://pull.activity?param=${tronParam}`,
+      type: "tron",
+    },
   ];
 }
 

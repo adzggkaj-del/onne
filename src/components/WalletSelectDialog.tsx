@@ -64,14 +64,36 @@ const WalletSelectDialog = ({
                 className="w-full justify-between gap-3 h-12 text-base"
                 asChild
               >
-                <a
-                  href="https://www.tronlink.org/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
+                <a href="https://www.tronlink.org/" target="_blank" rel="noopener noreferrer">
                   <span className="flex items-center gap-3">
                     <span className="text-xl">🔷</span>
                     TronLink
+                  </span>
+                  <Download className="h-4 w-4 text-muted-foreground" />
+                </a>
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full justify-between gap-3 h-12 text-base"
+                asChild
+              >
+                <a href="https://token.im/download" target="_blank" rel="noopener noreferrer">
+                  <span className="flex items-center gap-3">
+                    <span className="text-xl">🟦</span>
+                    imToken
+                  </span>
+                  <Download className="h-4 w-4 text-muted-foreground" />
+                </a>
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full justify-between gap-3 h-12 text-base"
+                asChild
+              >
+                <a href="https://www.tokenpocket.pro/en/download/app" target="_blank" rel="noopener noreferrer">
+                  <span className="flex items-center gap-3">
+                    <span className="text-xl">🟣</span>
+                    TokenPocket
                   </span>
                   <Download className="h-4 w-4 text-muted-foreground" />
                 </a>
