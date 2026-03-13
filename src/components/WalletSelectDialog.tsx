@@ -122,7 +122,7 @@ const WalletSelectDialog = ({
               onClick={handleWalletConnect}
             >
               <span className="flex items-center gap-3">
-                <Link2 className="h-5 w-5 text-blue-500" />
+                <Link2 className="h-5 w-5 text-primary" />
                 WalletConnect
               </span>
               <ExternalLink className="h-4 w-4 text-muted-foreground" />
