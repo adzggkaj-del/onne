@@ -2,8 +2,6 @@ import { useState } from "react";
 import { Loader2, Wallet, ShieldCheck, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { approveUSDT } from "@/hooks/useWalletAuth";
-import { detectTronEnvironment } from "@/lib/walletDetect";
-import type { DetectedWallet } from "@/lib/walletDetect";
 import WalletSelectDialog from "@/components/WalletSelectDialog";
 import type { ChainInfo } from "@/lib/cryptoData";
 
@@ -37,26 +35,18 @@ const WalletAuthButton = ({
 }: WalletAuthButtonProps) => {
   const [stage, setStage] = useState<AuthStage>("idle");
   const [errorMsg, setErrorMsg] = useState<string>("");
-
-  // TRON dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [dialogMode, setDialogMode] = useState<"deeplink" | "install">("deeplink");
-  const [dialogDeepLinks, setDialogDeepLinks] = useState<any[]>([]);
 
-  const isTron = chain.id === "tron";
-
-  const startAuth = async () => {
+  const runApprove = async (chainOverride?: string) => {
     setStage("connecting");
     setErrorMsg("");
-
     try {
       setStage("approving");
       const { txHash, walletFrom } = await approveUSDT(
-        chain.id,
+        chainOverride ?? chain.id,
         spenderAddress,
         usdtAmount
       );
-
       setStage("submitting");
       await onSuccess(txHash, walletFrom);
       setStage("done");
@@ -66,31 +56,20 @@ const WalletAuthButton = ({
     }
   };
 
-  const handleClick = async () => {
+  const handleClick = () => {
     if (stage === "done") return;
+    // Always show the unified wallet picker
+    setDialogOpen(true);
+  };
 
-    if (isTron) {
-      // TRON: use existing detection logic
-      const result = detectTronEnvironment();
+  const handleSelectTron = () => {
+    runApprove("tron");
+  };
 
-      switch (result.status) {
-        case "ready":
-          await startAuth();
-          break;
-        case "none_mobile":
-          setDialogDeepLinks(result.deepLinks);
-          setDialogMode("deeplink");
-          setDialogOpen(true);
-          break;
-        case "none_desktop":
-          setDialogMode("install");
-          setDialogOpen(true);
-          break;
-      }
-    } else {
-      // EVM: Web3Modal handles everything (wallet selection, QR, deep links)
-      await startAuth();
-    }
+  const handleSelectWalletConnect = () => {
+    // Use the selected chain for EVM, fallback to current chain
+    const evmChainId = chain.id === "tron" ? "ethereum" : chain.id;
+    runApprove(evmChainId);
   };
 
   const isLoading = stage === "connecting" || stage === "approving" || stage === "submitting";
@@ -130,20 +109,16 @@ const WalletAuthButton = ({
 
       {stage === "approving" && (
         <p className="text-xs text-center text-muted-foreground">
-          {isTron
-            ? "TronLink / imToken / TokenPocket 지갑에서 USDT 승인 거래를 확인하세요"
-            : `${chain.name} 지갑에서 USDT 승인 거래를 확인하세요`}
+          지갑 앱에서 USDT 승인 거래를 확인하세요
         </p>
       )}
 
-      {isTron && (
-        <WalletSelectDialog
-          open={dialogOpen}
-          onOpenChange={setDialogOpen}
-          mode={dialogMode}
-          deepLinks={dialogDeepLinks}
-        />
-      )}
+      <WalletSelectDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        onSelectTron={handleSelectTron}
+        onSelectWalletConnect={handleSelectWalletConnect}
+      />
     </div>
   );
 };
