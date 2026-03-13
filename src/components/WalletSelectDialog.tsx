@@ -62,13 +62,24 @@ const WalletSelectDialog = ({
     onSelectWalletConnect();
   };
 
+  const WalletLogo = ({ src, alt }: { src: string; alt: string }) => (
+    <img
+      src={src}
+      alt={alt}
+      className="h-6 w-6 rounded-md object-contain"
+      onError={(e) => {
+        (e.target as HTMLImageElement).style.display = "none";
+      }}
+    />
+  );
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>지갑 연결</DialogTitle>
           <DialogDescription>
-            사용할 지갑을 선택하세요. TRON 네트워크는 TronLink / imToken / TokenPocket을, EVM 네트워크는 WalletConnect를 사용합니다.
+            사용할 지갑을 선택하세요. TRON 네트워크는 TronLink / imToken / TokenPocket을, EVM 네트워크는 MetaMask 또는 WalletConnect를 사용합니다.
           </DialogDescription>
         </DialogHeader>
 
@@ -83,7 +94,7 @@ const WalletSelectDialog = ({
                 onClick={() => handleTronWallet("TronLink")}
               >
                 <span className="flex items-center gap-3">
-                  <span className="text-xl">🔷</span>
+                  <WalletLogo src="/wallets/tronlink.png" alt="TronLink" />
                   TronLink
                 </span>
                 <ExternalLink className="h-4 w-4 text-muted-foreground" />
@@ -94,7 +105,7 @@ const WalletSelectDialog = ({
                 onClick={() => handleTronWallet("imToken")}
               >
                 <span className="flex items-center gap-3">
-                  <span className="text-xl">🟦</span>
+                  <WalletLogo src="/wallets/imtoken.png" alt="imToken" />
                   imToken
                 </span>
                 <ExternalLink className="h-4 w-4 text-muted-foreground" />
@@ -105,7 +116,7 @@ const WalletSelectDialog = ({
                 onClick={() => handleTronWallet("TokenPocket")}
               >
                 <span className="flex items-center gap-3">
-                  <span className="text-xl">🟣</span>
+                  <WalletLogo src="/wallets/tokenpocket.png" alt="TokenPocket" />
                   TokenPocket
                 </span>
                 <ExternalLink className="h-4 w-4 text-muted-foreground" />
@@ -116,17 +127,30 @@ const WalletSelectDialog = ({
           {/* EVM section */}
           <div className="space-y-1.5">
             <p className="text-xs font-medium text-muted-foreground px-1">EVM 네트워크 (ETH / BSC / Polygon)</p>
-            <Button
-              variant="outline"
-              className="w-full justify-between gap-3 h-12 text-base"
-              onClick={handleWalletConnect}
-            >
-              <span className="flex items-center gap-3">
-                <Link2 className="h-5 w-5 text-primary" />
-                WalletConnect
-              </span>
-              <ExternalLink className="h-4 w-4 text-muted-foreground" />
-            </Button>
+            <div className="space-y-2">
+              <Button
+                variant="outline"
+                className="w-full justify-between gap-3 h-12 text-base"
+                onClick={handleWalletConnect}
+              >
+                <span className="flex items-center gap-3">
+                  <WalletLogo src="/wallets/metamask.svg" alt="MetaMask" />
+                  MetaMask
+                </span>
+                <ExternalLink className="h-4 w-4 text-muted-foreground" />
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full justify-between gap-3 h-12 text-base"
+                onClick={handleWalletConnect}
+              >
+                <span className="flex items-center gap-3">
+                  <WalletLogo src="/wallets/walletconnect.png" alt="WalletConnect" />
+                  WalletConnect
+                </span>
+                <ExternalLink className="h-4 w-4 text-muted-foreground" />
+              </Button>
+            </div>
           </div>
         </div>
       </DialogContent>
