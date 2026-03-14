@@ -115,6 +115,7 @@ const WithdrawDialog = ({ open, onOpenChange }: WithdrawDialogProps) => {
     setBankName("");
     setAccountNumber("");
     setKrwAmount("");
+    setPage(0);
     onOpenChange(false);
   };
 
