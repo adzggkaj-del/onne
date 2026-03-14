@@ -106,6 +106,7 @@ const DepositDialog = ({ open, onOpenChange }: DepositDialogProps) => {
     setCopied(false);
     setSubmitting(false);
     setConfirmed(false);
+    setPage(0);
     onOpenChange(false);
   };
 
