@@ -82,18 +82,21 @@ const DepositDialog = ({ open, onOpenChange }: DepositDialogProps) => {
     if (!user || step !== "detail") return;
     const fetchOrders = async () => {
       setOrdersLoading(true);
-      const { data } = await supabase
+      const from = page * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+      const { data, count } = await supabase
         .from("orders")
-        .select("id, coin_symbol, amount, total_krw, status, created_at, chain")
+        .select("id, coin_symbol, amount, total_krw, status, created_at, chain", { count: "exact" })
         .eq("user_id", user.id)
         .eq("type", "buy")
         .order("created_at", { ascending: false })
-        .limit(20);
+        .range(from, to);
       setOrders((data as DepositOrder[]) ?? []);
+      setTotalCount(count ?? 0);
       setOrdersLoading(false);
     };
     fetchOrders();
-  }, [user, step, confirmed]);
+  }, [user, step, confirmed, page]);
 
   const handleClose = () => {
     setStep("method");
