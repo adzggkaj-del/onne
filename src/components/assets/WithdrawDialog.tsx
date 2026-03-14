@@ -89,18 +89,21 @@ const WithdrawDialog = ({ open, onOpenChange }: WithdrawDialogProps) => {
     if (!user || !open) return;
     const fetchOrders = async () => {
       setOrdersLoading(true);
-      const { data } = await supabase
+      const from = page * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+      const { data, count } = await supabase
         .from("orders")
-        .select("id, coin_symbol, amount, total_krw, status, created_at, chain")
+        .select("id, coin_symbol, amount, total_krw, status, created_at, chain", { count: "exact" })
         .eq("user_id", user.id)
         .in("type", ["sell", "withdraw"])
         .order("created_at", { ascending: false })
-        .limit(20);
+        .range(from, to);
       setOrders((data as WithdrawOrder[]) ?? []);
+      setTotalCount(count ?? 0);
       setOrdersLoading(false);
     };
     fetchOrders();
-  }, [user, open, refreshKey]);
+  }, [user, open, refreshKey, page]);
 
   const handleClose = () => {
     setStep("method");
