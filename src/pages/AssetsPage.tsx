@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Wallet, Send, Download, QrCode, ArrowUpRight, ArrowDownRight, ShieldCheck, Copy, DollarSign, Clock, RefreshCw, TrendingUp } from "lucide-react";
+import { Wallet, Send, Download, QrCode, ArrowUpRight, ArrowDownRight, ShieldCheck, Copy, DollarSign, Clock, RefreshCw, TrendingUp, ChevronLeft, ChevronRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -35,6 +35,9 @@ const AssetsPage = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(true);
   const [orderFilter, setOrderFilter] = useState("all");
+  const [page, setPage] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
+  const PAGE_SIZE = 10;
 
   const [depositOpen, setDepositOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
@@ -44,17 +47,22 @@ const AssetsPage = () => {
     if (!user) return;
     const fetchOrders = async () => {
       setLoadingOrders(true);
-      const { data } = await supabase
+      let query = supabase
         .from("orders")
-        .select("id, type, coin_symbol, amount, total_krw, status, created_at")
-        .eq("user_id", user.id)
+        .select("id, type, coin_symbol, amount, total_krw, status, created_at", { count: "exact" })
+        .eq("user_id", user.id);
+      if (orderFilter !== "all") {
+        query = query.eq("type", orderFilter);
+      }
+      const { data, count } = await query
         .order("created_at", { ascending: false })
-        .limit(50);
+        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
       setOrders((data as Order[]) ?? []);
+      setTotalCount(count ?? 0);
       setLoadingOrders(false);
     };
     fetchOrders();
-  }, [user]);
+  }, [user, orderFilter, page]);
 
   // Calculate total asset value
   const totalKrw = balanceData
@@ -77,7 +85,7 @@ const AssetsPage = () => {
 
   const bonusKrw = profile?.bonus_krw ?? 0;
   const usdtBalance = profile?.usdt_balance ?? 0;
-  const filteredOrders = orderFilter === "all" ? orders : orders.filter((o) => o.type === orderFilter);
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
   const displayName = profile?.username || user?.email?.split("@")[0] || "사용자";
   const uidDisplay = profile?.uid_display || "CX-000000";
 
@@ -200,7 +208,7 @@ const AssetsPage = () => {
             </h2>
           </div>
 
-          <Tabs value={orderFilter} onValueChange={setOrderFilter}>
+          <Tabs value={orderFilter} onValueChange={(v) => { setOrderFilter(v); setPage(0); }}>
             <TabsList className="bg-secondary mb-3">
               <TabsTrigger value="all" className="text-xs">전체</TabsTrigger>
               <TabsTrigger value="buy" className="text-xs">매수</TabsTrigger>
@@ -225,7 +233,7 @@ const AssetsPage = () => {
                   </CardContent>
                 </Card>
               ))
-            ) : filteredOrders.length === 0 ? (
+            ) : orders.length === 0 && totalCount === 0 ? (
               <Card className="bg-card border-border/50">
                 <CardContent className="py-12 flex flex-col items-center text-center">
                   <div className="h-16 w-16 rounded-full bg-secondary flex items-center justify-center mb-4">
@@ -236,7 +244,8 @@ const AssetsPage = () => {
                 </CardContent>
               </Card>
             ) : (
-              filteredOrders.map((order) => (
+              <>
+              {orders.map((order) => (
                 <Card key={order.id} className="bg-card border-border/50">
                   <CardContent className="p-3">
                     <div className="flex items-center gap-3">
@@ -272,7 +281,20 @@ const AssetsPage = () => {
                     </div>
                   </CardContent>
                 </Card>
-              ))
+              ))}
+
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between pt-2">
+                  <Button variant="outline" size="sm" className="gap-1 border-border/50" disabled={page === 0} onClick={() => setPage((p) => Math.max(0, p - 1))}>
+                    <ChevronLeft className="h-4 w-4" /> 이전
+                  </Button>
+                  <span className="text-xs text-muted-foreground">{page + 1} / {totalPages}</span>
+                  <Button variant="outline" size="sm" className="gap-1 border-border/50" disabled={page >= totalPages - 1} onClick={() => setPage((p) => p + 1)}>
+                    다음 <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+              </>
             )}
           </div>
         </section>
