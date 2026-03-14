@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { AlertTriangle, Clock, ArrowUpFromLine, Loader2, Shield, Banknote, Coins, ArrowLeft } from "lucide-react";
+import { AlertTriangle, Clock, ArrowUpFromLine, Loader2, Shield, Banknote, Coins, ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
 import { chains, type ChainInfo } from "@/lib/cryptoData";
 import { useCryptoData } from "@/hooks/useCryptoData";
 import { useAuth } from "@/hooks/useAuth";
@@ -74,6 +74,9 @@ const WithdrawDialog = ({ open, onOpenChange }: WithdrawDialogProps) => {
   const [orders, setOrders] = useState<WithdrawOrder[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [page, setPage] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
+  const PAGE_SIZE = 10;
 
   const selectedCoin = coins.find((c) => c.id === selectedCoinId) ?? null;
   const selectedChain: ChainInfo | null = chains.find((c) => c.id === selectedChainId) ?? null;
@@ -86,18 +89,21 @@ const WithdrawDialog = ({ open, onOpenChange }: WithdrawDialogProps) => {
     if (!user || !open) return;
     const fetchOrders = async () => {
       setOrdersLoading(true);
-      const { data } = await supabase
+      const from = page * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+      const { data, count } = await supabase
         .from("orders")
-        .select("id, coin_symbol, amount, total_krw, status, created_at, chain")
+        .select("id, coin_symbol, amount, total_krw, status, created_at, chain", { count: "exact" })
         .eq("user_id", user.id)
         .in("type", ["sell", "withdraw"])
         .order("created_at", { ascending: false })
-        .limit(20);
+        .range(from, to);
       setOrders((data as WithdrawOrder[]) ?? []);
+      setTotalCount(count ?? 0);
       setOrdersLoading(false);
     };
     fetchOrders();
-  }, [user, open, refreshKey]);
+  }, [user, open, refreshKey, page]);
 
   const handleClose = () => {
     setStep("method");
@@ -109,6 +115,7 @@ const WithdrawDialog = ({ open, onOpenChange }: WithdrawDialogProps) => {
     setBankName("");
     setAccountNumber("");
     setKrwAmount("");
+    setPage(0);
     onOpenChange(false);
   };
 
@@ -384,6 +391,17 @@ const WithdrawDialog = ({ open, onOpenChange }: WithdrawDialogProps) => {
                       </div>
                     </div>
                   ))}
+                </div>
+              )}
+              {totalCount > PAGE_SIZE && (
+                <div className="flex items-center justify-between pt-2">
+                  <Button variant="outline" size="sm" className="gap-1 rounded-xl border-border/50" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>
+                    <ChevronLeft className="h-4 w-4" /> 이전
+                  </Button>
+                  <span className="text-xs text-muted-foreground">{page + 1} / {Math.ceil(totalCount / PAGE_SIZE)}</span>
+                  <Button variant="outline" size="sm" className="gap-1 rounded-xl border-border/50" disabled={(page + 1) * PAGE_SIZE >= totalCount} onClick={() => setPage((p) => p + 1)}>
+                    다음 <ChevronRight className="h-4 w-4" />
+                  </Button>
                 </div>
               )}
             </div>

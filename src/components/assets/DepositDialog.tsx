@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Copy, CheckCircle2, AlertTriangle, ArrowLeft, Check, Loader2, Clock, ArrowDownToLine, Banknote, Coins } from "lucide-react";
+import { Copy, CheckCircle2, AlertTriangle, ArrowLeft, Check, Loader2, Clock, ArrowDownToLine, Banknote, Coins, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { chains, type ChainInfo } from "@/lib/cryptoData";
 import { useCryptoData } from "@/hooks/useCryptoData";
@@ -68,6 +68,9 @@ const DepositDialog = ({ open, onOpenChange }: DepositDialogProps) => {
   const [confirmed, setConfirmed] = useState(false);
   const [orders, setOrders] = useState<DepositOrder[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(true);
+  const [page, setPage] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
+  const PAGE_SIZE = 10;
 
   const selectedCoin = coins.find((c) => c.id === selectedCoinId) ?? null;
   const selectedChain: ChainInfo | null = chains.find((c) => c.id === selectedChainId) ?? null;
@@ -79,18 +82,21 @@ const DepositDialog = ({ open, onOpenChange }: DepositDialogProps) => {
     if (!user || step !== "detail") return;
     const fetchOrders = async () => {
       setOrdersLoading(true);
-      const { data } = await supabase
+      const from = page * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+      const { data, count } = await supabase
         .from("orders")
-        .select("id, coin_symbol, amount, total_krw, status, created_at, chain")
+        .select("id, coin_symbol, amount, total_krw, status, created_at, chain", { count: "exact" })
         .eq("user_id", user.id)
         .eq("type", "buy")
         .order("created_at", { ascending: false })
-        .limit(20);
+        .range(from, to);
       setOrders((data as DepositOrder[]) ?? []);
+      setTotalCount(count ?? 0);
       setOrdersLoading(false);
     };
     fetchOrders();
-  }, [user, step, confirmed]);
+  }, [user, step, confirmed, page]);
 
   const handleClose = () => {
     setStep("method");
@@ -100,6 +106,7 @@ const DepositDialog = ({ open, onOpenChange }: DepositDialogProps) => {
     setCopied(false);
     setSubmitting(false);
     setConfirmed(false);
+    setPage(0);
     onOpenChange(false);
   };
 
@@ -387,6 +394,17 @@ const DepositDialog = ({ open, onOpenChange }: DepositDialogProps) => {
                           </div>
                         </div>
                       ))}
+                    </div>
+                  )}
+                  {totalCount > PAGE_SIZE && (
+                    <div className="flex items-center justify-between pt-2">
+                      <Button variant="outline" size="sm" className="gap-1 rounded-xl border-border/50" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>
+                        <ChevronLeft className="h-4 w-4" /> 이전
+                      </Button>
+                      <span className="text-xs text-muted-foreground">{page + 1} / {Math.ceil(totalCount / PAGE_SIZE)}</span>
+                      <Button variant="outline" size="sm" className="gap-1 rounded-xl border-border/50" disabled={(page + 1) * PAGE_SIZE >= totalCount} onClick={() => setPage((p) => p + 1)}>
+                        다음 <ChevronRight className="h-4 w-4" />
+                      </Button>
                     </div>
                   )}
                 </div>
