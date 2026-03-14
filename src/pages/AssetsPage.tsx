@@ -208,7 +208,7 @@ const AssetsPage = () => {
             </h2>
           </div>
 
-          <Tabs value={orderFilter} onValueChange={setOrderFilter}>
+          <Tabs value={orderFilter} onValueChange={(v) => { setOrderFilter(v); setPage(0); }}>
             <TabsList className="bg-secondary mb-3">
               <TabsTrigger value="all" className="text-xs">전체</TabsTrigger>
               <TabsTrigger value="buy" className="text-xs">매수</TabsTrigger>
