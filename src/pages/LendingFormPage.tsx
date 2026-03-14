@@ -76,17 +76,18 @@ const LendingFormPage = () => {
   useEffect(() => {
     if (!user) return;
     const fetchOrders = async () => {
-      const { data } = await supabase
+      const { data, count } = await supabase
         .from("orders")
-        .select("id, coin_symbol, amount, total_krw, status, created_at, chain, term_days, repayment_date")
+        .select("id, coin_symbol, amount, total_krw, status, created_at, chain, term_days, repayment_date", { count: "exact" })
         .eq("user_id", user.id)
         .eq("type", "lending")
         .order("created_at", { ascending: false })
-        .limit(20);
+        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
       if (data) setOrders(data);
+      setTotalCount(count ?? 0);
     };
     fetchOrders();
-  }, [user, confirmed]);
+  }, [user, confirmed, page]);
 
   const loanKrw = selectedAmount ?? 0;
   const interestRate = selectedPlan?.interest_rate ?? 0;
