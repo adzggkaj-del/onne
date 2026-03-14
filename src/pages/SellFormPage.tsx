@@ -481,30 +481,7 @@ const SellFormPage = () => {
               </div>
             )}
 
-            {/* Crypto address + QR */}
-            {paymentMethod === "crypto" && platformAddress && (
-              <div className="space-y-3">
-                <Label className="text-xs text-muted-foreground">입금 주소</Label>
-                <div className="flex flex-col items-center gap-3 rounded-xl bg-card border border-border/50 p-4">
-                  {qrUrl && (
-                    <img
-                      src={qrUrl}
-                      alt="QR Code"
-                      className="w-40 h-40 rounded-lg"
-                      loading="lazy"
-                    />
-                  )}
-                  <div className="flex items-center gap-2 w-full">
-                    <code className="flex-1 text-xs break-all bg-muted/50 rounded-lg p-2.5 font-mono">
-                      {platformAddress}
-                    </code>
-                    <Button variant="outline" size="icon" className="shrink-0 h-9 w-9 border-border/50" onClick={handleCopy}>
-                      <Copy className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
+            {/* Crypto: no extra UI needed, just authorize directly */}
 
             {/* Submit */}
             {selectedChain && (
