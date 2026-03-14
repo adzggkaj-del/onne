@@ -202,7 +202,7 @@ const DepositDialog = ({ open, onOpenChange }: DepositDialogProps) => {
                     <Banknote className="h-6 w-6 text-primary" />
                     <div>
                       <p className="font-semibold text-sm">원화 입금 </p>
-                      <p class="text-xs text-muted-foreground">고객센터에 문의해주세요.</p>
+                      <p className="text-xs text-muted-foreground">고객센터에 문의해주세요.</p>
                     </div>
                   </label>
                   <label className={`flex items-center gap-4 rounded-xl border p-4 cursor-pointer transition-all ${method === "crypto" ? "border-primary bg-primary/5" : "border-border/50 bg-card"}`}>
