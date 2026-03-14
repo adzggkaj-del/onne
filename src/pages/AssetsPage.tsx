@@ -47,17 +47,22 @@ const AssetsPage = () => {
     if (!user) return;
     const fetchOrders = async () => {
       setLoadingOrders(true);
-      const { data } = await supabase
+      let query = supabase
         .from("orders")
-        .select("id, type, coin_symbol, amount, total_krw, status, created_at")
-        .eq("user_id", user.id)
+        .select("id, type, coin_symbol, amount, total_krw, status, created_at", { count: "exact" })
+        .eq("user_id", user.id);
+      if (orderFilter !== "all") {
+        query = query.eq("type", orderFilter);
+      }
+      const { data, count } = await query
         .order("created_at", { ascending: false })
-        .limit(50);
+        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
       setOrders((data as Order[]) ?? []);
+      setTotalCount(count ?? 0);
       setLoadingOrders(false);
     };
     fetchOrders();
-  }, [user]);
+  }, [user, orderFilter, page]);
 
   // Calculate total asset value
   const totalKrw = balanceData
