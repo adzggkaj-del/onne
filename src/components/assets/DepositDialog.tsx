@@ -68,6 +68,9 @@ const DepositDialog = ({ open, onOpenChange }: DepositDialogProps) => {
   const [confirmed, setConfirmed] = useState(false);
   const [orders, setOrders] = useState<DepositOrder[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(true);
+  const [page, setPage] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
+  const PAGE_SIZE = 10;
 
   const selectedCoin = coins.find((c) => c.id === selectedCoinId) ?? null;
   const selectedChain: ChainInfo | null = chains.find((c) => c.id === selectedChainId) ?? null;
