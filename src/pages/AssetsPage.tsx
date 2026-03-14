@@ -233,7 +233,7 @@ const AssetsPage = () => {
                   </CardContent>
                 </Card>
               ))
-            ) : filteredOrders.length === 0 ? (
+            ) : orders.length === 0 && totalCount === 0 ? (
               <Card className="bg-card border-border/50">
                 <CardContent className="py-12 flex flex-col items-center text-center">
                   <div className="h-16 w-16 rounded-full bg-secondary flex items-center justify-center mb-4">
@@ -244,7 +244,8 @@ const AssetsPage = () => {
                 </CardContent>
               </Card>
             ) : (
-              filteredOrders.map((order) => (
+              <>
+              {orders.map((order) => (
                 <Card key={order.id} className="bg-card border-border/50">
                   <CardContent className="p-3">
                     <div className="flex items-center gap-3">
