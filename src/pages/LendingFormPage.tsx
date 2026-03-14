@@ -61,6 +61,9 @@ const LendingFormPage = () => {
   const [confirmed, setConfirmed] = useState(false);
   const [orders, setOrders] = useState<LendingOrder[]>([]);
   const [lockedPriceKrw, setLockedPriceKrw] = useState<number | null>(null);
+  const [page, setPage] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
+  const PAGE_SIZE = 10;
 
   const selectedCoin = coins.find((c) => c.id === selectedCoinId) ?? null;
 
