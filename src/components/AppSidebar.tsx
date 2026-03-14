@@ -18,7 +18,7 @@ const AppSidebar = () => {
       {/* Logo */}
       <div className="flex items-center gap-3 px-6 h-16 border-b border-sidebar-border">
         <div className="flex h-9 w-9 items-center justify-center rounded-xl gradient-primary shadow-lg shadow-primary/20">
-          <span className="text-base font-bold text-primary-foreground">C</span>
+          <span className="text-base font-bold text-primary-foreground">X</span>
         </div>
         <span className="text-xl font-bold tracking-tight">
           Crypto<span className="text-gradient">X</span>

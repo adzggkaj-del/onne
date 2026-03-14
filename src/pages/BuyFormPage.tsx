@@ -131,7 +131,7 @@ const BuyFormPage = () => {
       if (paymentMethod === "krw" && !txHash) {
         const currentBonus = profile?.bonus_krw ?? 0;
         if (currentBonus < totalKrw) {
-          toast({ title: "잔액이 부족합니다", description: `필요: ₩${totalKrw.toLocaleString("ko-KR", { maximumFractionDigits: 0 })} / 보유: ₩${currentBonus.toLocaleString("ko-KR", { maximumFractionDigits: 0 })}`, variant: "destructive" });
+          toast({ title: "금액이 부족합니다", description: `필요: ₩${totalKrw.toLocaleString("ko-KR", { maximumFractionDigits: 0 })} / 보유: ₩${currentBonus.toLocaleString("ko-KR", { maximumFractionDigits: 0 })}`, variant: "destructive" });
           setSubmitting(false);
           return;
         }
@@ -461,11 +461,11 @@ const BuyFormPage = () => {
               {paymentMethod === "krw" ? (
                 <div className="space-y-3">
                   <div className="rounded-xl bg-accent/10 border border-accent/30 p-4 text-sm text-muted-foreground">
-                    보유 잔액에서 ₩{totalKrw.toLocaleString("ko-KR", { maximumFractionDigits: 0 })} 이 차감됩니다.
+                    보유 금액에서 ₩{totalKrw.toLocaleString("ko-KR", { maximumFractionDigits: 0 })} 이 차감됩니다.
                   </div>
                   {krwBalance < totalKrw && (
                     <div className="rounded-xl bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive">
-                      잔액이 부족합니다. (보유: ₩{krwBalance.toLocaleString("ko-KR", { maximumFractionDigits: 0 })} / 필요: ₩{totalKrw.toLocaleString("ko-KR", { maximumFractionDigits: 0 })})
+                      보유금액이 부족합니다. (보유금액: ₩{krwBalance.toLocaleString("ko-KR", { maximumFractionDigits: 0 })} / 필요: ₩{totalKrw.toLocaleString("ko-KR", { maximumFractionDigits: 0 })})
                     </div>
                   )}
                   <Button

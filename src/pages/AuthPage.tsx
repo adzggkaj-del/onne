@@ -100,7 +100,7 @@ const AuthPage = () => {
           <CardHeader className="text-center pb-2">
             <div className="flex items-center justify-center gap-2 mb-4">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl gradient-primary shadow-lg shadow-primary/20">
-                <span className="text-lg font-bold text-primary-foreground">C</span>
+                <span className="text-lg font-bold text-primary-foreground">X</span>
               </div>
               <span className="text-2xl font-bold tracking-tight">
                 Crypto<span className="text-gradient">X</span>

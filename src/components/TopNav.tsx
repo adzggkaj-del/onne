@@ -19,7 +19,9 @@ const TopNav = () => {
       {/* Logo - visible on mobile */}
       <div className="flex items-center gap-3 md:hidden">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg gradient-primary">
-          <span className="text-sm font-bold text-primary-foreground">C</span>
+          <span className="text-sm font-bold text-primary-foreground">
+            X
+            </span>
         </div>
         <span className="text-lg font-bold tracking-tight">
           Crypto<span className="text-gradient">X</span>
