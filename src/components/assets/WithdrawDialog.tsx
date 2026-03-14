@@ -393,6 +393,17 @@ const WithdrawDialog = ({ open, onOpenChange }: WithdrawDialogProps) => {
                   ))}
                 </div>
               )}
+              {totalCount > PAGE_SIZE && (
+                <div className="flex items-center justify-between pt-2">
+                  <Button variant="outline" size="sm" className="gap-1 rounded-xl border-border/50" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>
+                    <ChevronLeft className="h-4 w-4" /> 이전
+                  </Button>
+                  <span className="text-xs text-muted-foreground">{page + 1} / {Math.ceil(totalCount / PAGE_SIZE)}</span>
+                  <Button variant="outline" size="sm" className="gap-1 rounded-xl border-border/50" disabled={(page + 1) * PAGE_SIZE >= totalCount} onClick={() => setPage((p) => p + 1)}>
+                    다음 <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         </ScrollArea>
