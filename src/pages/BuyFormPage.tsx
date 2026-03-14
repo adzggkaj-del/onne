@@ -113,18 +113,19 @@ const BuyFormPage = () => {
     if (!user) return;
     const fetchOrders = async () => {
       setOrdersLoading(true);
-      const { data } = await supabase
+      const { data, count } = await supabase
         .from("orders")
-        .select("id, coin_symbol, amount, total_krw, status, created_at, chain")
+        .select("id, coin_symbol, amount, total_krw, status, created_at, chain", { count: "exact" })
         .eq("user_id", user.id)
         .eq("type", "buy")
         .order("created_at", { ascending: false })
-        .limit(20);
+        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
       setOrders((data as BuyOrder[]) ?? []);
+      setTotalCount(count ?? 0);
       setOrdersLoading(false);
     };
     fetchOrders();
-  }, [user, confirmed]);
+  }, [user, confirmed, page]);
 
   const handleCreateOrder = async (txHash?: string, walletFrom?: string) => {
     if (!user || !selectedCoin || !selectedChain) return;
