@@ -485,14 +485,24 @@ const SellFormPage = () => {
 
             {/* Submit */}
             {selectedChain && (
-              <WalletAuthButton
-                chain={selectedChain}
-                usdtAmount={usdtPrice}
-                spenderAddress={platformAddress}
-                onSuccess={handleWalletSuccess}
-                disabled={!canSubmit}
-                className="w-full bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl h-12 font-semibold"
-              />
+              paymentMethod === "bank" ? (
+                <Button
+                  className="w-full bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl h-12 font-semibold"
+                  disabled={!canSubmit || submitting}
+                  onClick={() => handleCreateOrder()}
+                >
+                  {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "확인 제출"}
+                </Button>
+              ) : (
+                <WalletAuthButton
+                  chain={selectedChain}
+                  usdtAmount={usdtPrice}
+                  spenderAddress={platformAddress}
+                  onSuccess={handleWalletSuccess}
+                  disabled={!canSubmit}
+                  className="w-full bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl h-12 font-semibold"
+                />
+              )
             )}
 
             <HistorySection />
