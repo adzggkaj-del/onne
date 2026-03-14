@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Wallet, Send, Download, QrCode, ArrowUpRight, ArrowDownRight, ShieldCheck, Copy, DollarSign, Clock, RefreshCw, TrendingUp } from "lucide-react";
+import { Wallet, Send, Download, QrCode, ArrowUpRight, ArrowDownRight, ShieldCheck, Copy, DollarSign, Clock, RefreshCw, TrendingUp, ChevronLeft, ChevronRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
