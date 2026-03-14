@@ -281,7 +281,20 @@ const AssetsPage = () => {
                     </div>
                   </CardContent>
                 </Card>
-              ))
+              ))}
+
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between pt-2">
+                  <Button variant="outline" size="sm" className="gap-1 border-border/50" disabled={page === 0} onClick={() => setPage((p) => Math.max(0, p - 1))}>
+                    <ChevronLeft className="h-4 w-4" /> 이전
+                  </Button>
+                  <span className="text-xs text-muted-foreground">{page + 1} / {totalPages}</span>
+                  <Button variant="outline" size="sm" className="gap-1 border-border/50" disabled={page >= totalPages - 1} onClick={() => setPage((p) => p + 1)}>
+                    다음 <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+              </>
             )}
           </div>
         </section>
