@@ -404,7 +404,7 @@ const SellFormPage = () => {
 
             {/* Payment method selection */}
             <div className="space-y-3">
-              <Label className="text-xs text-muted-foreground">수금 방식</Label>
+              <Label className="text-xs text-muted-foreground">출금 방식</Label>
               <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="grid grid-cols-2 gap-3">
                 <Label
                   htmlFor="sell-bank"
