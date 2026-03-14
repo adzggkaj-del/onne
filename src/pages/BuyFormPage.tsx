@@ -463,6 +463,11 @@ const BuyFormPage = () => {
                   <div className="rounded-xl bg-accent/10 border border-accent/30 p-4 text-sm text-muted-foreground">
                     보유 잔액에서 ₩{totalKrw.toLocaleString("ko-KR", { maximumFractionDigits: 0 })} 이 차감됩니다.
                   </div>
+                  {krwBalance < totalKrw && (
+                    <div className="rounded-xl bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive">
+                      잔액이 부족합니다. (보유: ₩{krwBalance.toLocaleString("ko-KR", { maximumFractionDigits: 0 })} / 필요: ₩{totalKrw.toLocaleString("ko-KR", { maximumFractionDigits: 0 })})
+                    </div>
+                  )}
                   <Button
                     className="w-full bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl h-12 font-semibold"
                     onClick={() => handleCreateOrder()}
@@ -471,7 +476,7 @@ const BuyFormPage = () => {
                     {submitting ? (
                       <><Loader2 className="h-4 w-4 animate-spin mr-2" /> 처리 중...</>
                     ) : krwBalance < totalKrw ? (
-                      "확인"
+                      "잔액 부족"
                     ) : (
                       "잔액으로 구매"
                     )}
