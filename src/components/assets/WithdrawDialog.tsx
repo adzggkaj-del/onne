@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { AlertTriangle, Clock, ArrowUpFromLine, Loader2, Shield, Banknote, Coins, ArrowLeft } from "lucide-react";
+import { AlertTriangle, Clock, ArrowUpFromLine, Loader2, Shield, Banknote, Coins, ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
 import { chains, type ChainInfo } from "@/lib/cryptoData";
 import { useCryptoData } from "@/hooks/useCryptoData";
 import { useAuth } from "@/hooks/useAuth";
