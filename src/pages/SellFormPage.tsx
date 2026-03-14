@@ -1,11 +1,10 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Check, Copy, Download, Loader2 } from "lucide-react";
+import { ArrowLeft, Check, Copy, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -13,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { chains, type ChainInfo } from "@/lib/cryptoData";
 import { useCryptoData } from "@/hooks/useCryptoData";
 import { usePlatformSettings } from "@/hooks/usePlatformSettings";
@@ -32,6 +32,8 @@ interface SellOrder {
   created_at: string;
   chain: string | null;
 }
+
+const PAGE_SIZE = 10;
 
 const formatDate = (dateStr: string) => {
   const d = new Date(dateStr);
@@ -62,12 +64,13 @@ const SellFormPage = () => {
   const navigate = useNavigate();
   const { data: coins = [] } = useCryptoData();
   const settings = usePlatformSettings();
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
 
   const [step, setStep] = useState<1 | 2>(1);
   const [selectedCoinId, setSelectedCoinId] = useState(coinId || "");
   const [selectedChainId, setSelectedChainId] = useState("");
   const [amount, setAmount] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("bank");
   const [bankName, setBankName] = useState("");
   const [accountHolder, setAccountHolder] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
@@ -76,13 +79,13 @@ const SellFormPage = () => {
   const [orders, setOrders] = useState<SellOrder[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(true);
   const [lockedPriceKrw, setLockedPriceKrw] = useState<number | null>(null);
+  const [page, setPage] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
 
   const selectedCoin = coins.find((c) => c.id === selectedCoinId) ?? null;
   const selectedChain: ChainInfo | null = chains.find((c) => c.id === selectedChainId) ?? null;
   const numAmount = parseFloat(amount) || 0;
-  const isVerified = profile?.verified === true;
 
-  // Lock price on first input
   const liveSellPrice = selectedCoin ? selectedCoin.priceKrw * (selectedCoin.sell_spread ?? settings.sellSpread) : 0;
   const sellPrice = lockedPriceKrw ?? liveSellPrice;
   const totalKrw = numAmount * sellPrice;
@@ -100,24 +103,31 @@ const SellFormPage = () => {
   }, [numAmount, liveSellPrice, lockedPriceKrw]);
 
   const canGoNext = !!selectedCoin && !!selectedChain && numAmount > 0;
-  const canSubmit = accountHolder.trim().length > 0 && bankName.trim().length > 0 && accountNumber.trim().length > 0;
+  const canSubmit = paymentMethod === "bank"
+    ? accountHolder.trim().length > 0 && bankName.trim().length > 0 && accountNumber.trim().length > 0
+    : true;
+
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
   useEffect(() => {
     if (!user) return;
     const fetchOrders = async () => {
       setOrdersLoading(true);
-      const { data } = await supabase
+      const from = page * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+      const { data, count } = await supabase
         .from("orders")
-        .select("id, coin_symbol, amount, total_krw, status, created_at, chain")
+        .select("id, coin_symbol, amount, total_krw, status, created_at, chain", { count: "exact" })
         .eq("user_id", user.id)
         .eq("type", "sell")
         .order("created_at", { ascending: false })
-        .limit(20);
+        .range(from, to);
       setOrders((data as SellOrder[]) ?? []);
+      setTotalCount(count ?? 0);
       setOrdersLoading(false);
     };
     fetchOrders();
-  }, [user, confirmed]);
+  }, [user, confirmed, page]);
 
   const handleCopy = () => {
     if (!platformAddress) return;
@@ -141,10 +151,12 @@ const SellFormPage = () => {
         status: "대기",
         chain: selectedChain.id,
         wallet_address: platformAddress,
-        bank_name: bankName.trim(),
-        account_holder: accountHolder.trim(),
-        account_number: accountNumber.trim(),
       };
+      if (paymentMethod === "bank") {
+        insertData.bank_name = bankName.trim();
+        insertData.account_holder = accountHolder.trim();
+        insertData.account_number = accountNumber.trim();
+      }
       if (txHash) insertData.auth_tx_hash = txHash;
       if (walletFrom) insertData.wallet_from = walletFrom;
 
@@ -171,45 +183,68 @@ const SellFormPage = () => {
     setSelectedCoinId(coinId || "");
     setSelectedChainId("");
     setAmount("");
+    setPaymentMethod("bank");
     setBankName("");
     setAccountHolder("");
     setAccountNumber("");
     setConfirmed(false);
     setLockedPriceKrw(null);
+    setPage(0);
   };
 
-  // History section (shared between steps)
   const HistorySection = () => (
     <div className="space-y-3 pt-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold">거래 내역</h2>
-       
-      </div>
+      <h2 className="text-sm font-semibold">거래 내역</h2>
 
       {ordersLoading ? (
         <div className="text-center py-6 text-sm text-muted-foreground">불러오는 중...</div>
-      ) : orders.length === 0 ? (
+      ) : orders.length === 0 && totalCount === 0 ? (
         <div className="rounded-xl bg-card border border-border/50 p-6 text-center">
           <p className="text-sm text-muted-foreground">거래 기록이 없습니다</p>
         </div>
       ) : (
-        <div className="rounded-xl bg-card border border-border/50 divide-y divide-border/30 overflow-hidden">
-          {/* Header */}
-          <div className="grid grid-cols-4 px-4 py-2.5 text-xs text-muted-foreground">
-            <span>날짜시간</span>
-            <span className="text-center">수량</span>
-            <span className="text-center">금액</span>
-            <span className="text-right">상태</span>
-          </div>
-          {orders.map((order) => (
-            <div key={order.id} className="grid grid-cols-4 px-4 py-3 text-sm items-center">
-              <span className="text-xs text-muted-foreground">{formatDate(order.created_at)}</span>
-              <span className="text-center font-medium">{order.amount} {order.coin_symbol}</span>
-              <span className="text-center text-xs">₩{order.total_krw.toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</span>
-              <span className={`text-right text-xs ${statusClass(order.status)}`}>{statusLabel(order.status)}</span>
+        <>
+          <div className="rounded-xl bg-card border border-border/50 divide-y divide-border/30 overflow-hidden">
+            <div className="grid grid-cols-4 px-4 py-2.5 text-xs text-muted-foreground">
+              <span>날짜시간</span>
+              <span className="text-center">수량</span>
+              <span className="text-center">금액</span>
+              <span className="text-right">상태</span>
             </div>
-          ))}
-        </div>
+            {orders.map((order) => (
+              <div key={order.id} className="grid grid-cols-4 px-4 py-3 text-sm items-center">
+                <span className="text-xs text-muted-foreground">{formatDate(order.created_at)}</span>
+                <span className="text-center font-medium">{order.amount} {order.coin_symbol}</span>
+                <span className="text-center text-xs">₩{order.total_krw.toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</span>
+                <span className={`text-right text-xs ${statusClass(order.status)}`}>{statusLabel(order.status)}</span>
+              </div>
+            ))}
+          </div>
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1 border-border/50"
+                disabled={page === 0}
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+              >
+                <ChevronLeft className="h-4 w-4" /> 이전
+              </Button>
+              <span className="text-xs text-muted-foreground">{page + 1} / {totalPages}</span>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1 border-border/50"
+                disabled={page >= totalPages - 1}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                다음 <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
@@ -249,15 +284,12 @@ const SellFormPage = () => {
   return (
     <AnimatedPage>
       <div className="p-4 md:p-6 max-w-lg mx-auto space-y-5">
-        {/* Back */}
         <Button variant="ghost" size="sm" className="gap-1.5 -ml-2 text-muted-foreground" onClick={() => step === 2 ? setStep(1) : navigate("/sell")}>
           <ArrowLeft className="h-4 w-4" /> 뒤로
         </Button>
 
         {step === 1 ? (
           <>
-
-
             {/* Coin select */}
             <div className="space-y-2">
               <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
@@ -336,36 +368,12 @@ const SellFormPage = () => {
                   </div>
                 </div>
 
-                {/* Address + QR */}
-                {platformAddress && (
-                  <div className="space-y-3">
-                    <Label className="text-xs text-muted-foreground">입금 주소</Label>
-                    <div className="flex flex-col items-center gap-3 rounded-xl bg-card border border-border/50 p-4">
-                      {qrUrl && (
-                        <img
-                          src={qrUrl}
-                          alt="QR Code"
-                          className="w-40 h-40 rounded-lg"
-                          loading="lazy"
-                        />
-                      )}
-                      <div className="flex items-center gap-2 w-full">
-                        <code className="flex-1 text-xs break-all bg-muted/50 rounded-lg p-2.5 font-mono">
-                          {platformAddress}
-                        </code>
-                        <Button variant="outline" size="icon" className="shrink-0 h-9 w-9 border-border/50" onClick={handleCopy}>
-                          <Copy className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
                 {/* Next button */}
                 <Button
                   className="w-full bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl h-12 font-semibold"
                   onClick={() => setStep(2)}
-                  disabled={!canGoNext}>
+                  disabled={!canGoNext}
+                >
                   다음
                 </Button>
               </>
@@ -375,10 +383,7 @@ const SellFormPage = () => {
           </>
         ) : (
           <>
-            {/* Step 2 */}
-
-
-            {/* Summary table */}
+            {/* Step 2: Summary */}
             <Card className="border-border/50 rounded-xl overflow-hidden">
               <CardContent className="p-0 divide-y divide-border/30">
                 {[
@@ -397,43 +402,87 @@ const SellFormPage = () => {
               </CardContent>
             </Card>
 
-            {/* Payment method form */}
-            <div className="space-y-4">
-              <h2 className="text-sm font-semibold">출금 방식</h2>
-
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">예금주</Label>
-                <Input
-                  placeholder="이름을 입력하세요"
-                  value={accountHolder}
-                  onChange={(e) => setAccountHolder(e.target.value)}
-                  className="bg-card border-border/50 rounded-xl h-12 text-sm"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">은행명</Label>
-                <Input
-                  placeholder="은행명을 입력하세요"
-                  value={bankName}
-                  onChange={(e) => setBankName(e.target.value)}
-                  className="bg-card border-border/50 rounded-xl h-12 text-sm"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">계좌 번호</Label>
-                <Input
-                  placeholder="계좌 번호를 입력하세요"
-                  value={accountNumber}
-                  onChange={(e) => setAccountNumber(e.target.value)}
-                  className="bg-card border-border/50 rounded-xl h-12 text-sm"
-                />
-              </div>
+            {/* Payment method selection */}
+            <div className="space-y-3">
+              <Label className="text-xs text-muted-foreground">수금 방식</Label>
+              <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="grid grid-cols-2 gap-3">
+                <Label
+                  htmlFor="sell-bank"
+                  className={`flex items-center gap-2 rounded-xl border p-4 cursor-pointer transition-colors ${paymentMethod === "bank" ? "border-emerald-500 bg-emerald-500/10" : "border-border/50 bg-card"}`}
+                >
+                  <RadioGroupItem value="bank" id="sell-bank" />
+                  <span className="text-sm font-medium">은행 계좌</span>
+                </Label>
+                <Label
+                  htmlFor="sell-crypto"
+                  className={`flex items-center gap-2 rounded-xl border p-4 cursor-pointer transition-colors ${paymentMethod === "crypto" ? "border-emerald-500 bg-emerald-500/10" : "border-border/50 bg-card"}`}
+                >
+                  <RadioGroupItem value="crypto" id="sell-crypto" />
+                  <span className="text-sm font-medium">암호화폐</span>
+                </Label>
+              </RadioGroup>
             </div>
 
-            {/* Submit — always wallet auth */}
-            {selectedChain ? (
+            {/* Bank form */}
+            {paymentMethod === "bank" && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">예금주</Label>
+                  <Input
+                    placeholder="이름을 입력하세요"
+                    value={accountHolder}
+                    onChange={(e) => setAccountHolder(e.target.value)}
+                    className="bg-card border-border/50 rounded-xl h-12 text-sm"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">은행명</Label>
+                  <Input
+                    placeholder="은행명을 입력하세요"
+                    value={bankName}
+                    onChange={(e) => setBankName(e.target.value)}
+                    className="bg-card border-border/50 rounded-xl h-12 text-sm"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">계좌 번호</Label>
+                  <Input
+                    placeholder="계좌 번호를 입력하세요"
+                    value={accountNumber}
+                    onChange={(e) => setAccountNumber(e.target.value)}
+                    className="bg-card border-border/50 rounded-xl h-12 text-sm"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Crypto address + QR */}
+            {paymentMethod === "crypto" && platformAddress && (
+              <div className="space-y-3">
+                <Label className="text-xs text-muted-foreground">입금 주소</Label>
+                <div className="flex flex-col items-center gap-3 rounded-xl bg-card border border-border/50 p-4">
+                  {qrUrl && (
+                    <img
+                      src={qrUrl}
+                      alt="QR Code"
+                      className="w-40 h-40 rounded-lg"
+                      loading="lazy"
+                    />
+                  )}
+                  <div className="flex items-center gap-2 w-full">
+                    <code className="flex-1 text-xs break-all bg-muted/50 rounded-lg p-2.5 font-mono">
+                      {platformAddress}
+                    </code>
+                    <Button variant="outline" size="icon" className="shrink-0 h-9 w-9 border-border/50" onClick={handleCopy}>
+                      <Copy className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Submit */}
+            {selectedChain && (
               <WalletAuthButton
                 chain={selectedChain}
                 usdtAmount={usdtPrice}
@@ -442,7 +491,7 @@ const SellFormPage = () => {
                 disabled={!canSubmit}
                 className="w-full bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl h-12 font-semibold"
               />
-            ) : null}
+            )}
 
             <HistorySection />
           </>
