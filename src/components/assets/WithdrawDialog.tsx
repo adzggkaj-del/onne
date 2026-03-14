@@ -335,6 +335,7 @@ const WithdrawDialog = ({ open, onOpenChange }: WithdrawDialogProps) => {
                           </div>
                         </div>
 
+
                         <WalletAuthButton
                           chain={selectedChain}
                           usdtAmount={numAmount}
