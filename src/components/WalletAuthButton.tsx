@@ -17,7 +17,7 @@ interface WalletAuthButtonProps {
 }
 
 const STAGE_LABELS: Record<AuthStage, string> = {
-  idle: "지갑 연결 및 승인",
+  idle: "지갑 연결하기",
   connecting: "지갑 연결 중...",
   approving: "지갑에서 승인을 확인하세요...",
   submitting: "주문 제출 중...",

@@ -147,10 +147,10 @@ const LendingFormPage = () => {
       <div className="p-4 md:p-6 max-w-2xl mx-auto space-y-5">
         {/* Header */}
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" className="-ml-2" onClick={() => navigate("/lending")}>
-            <ArrowLeft className="h-4 w-4" />
+          <Button variant="ghost" size="sm" className="gap-1.5 -ml-2 text-muted-foreground" onClick={() => navigate("/lending")}>
+            <ArrowLeft className="h-4 w-4" /> 뒤로
           </Button>
-          <h1 className="text-lg font-bold">대출</h1>
+
         </div>
 
         {confirmed ? (
@@ -174,7 +174,7 @@ const LendingFormPage = () => {
                 <div className="h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center">
                   <Check className="h-3 w-3 text-primary" />
                 </div>
-                선택 비종
+                선택 코인
               </div>
               <Select value={selectedCoinId} onValueChange={setSelectedCoinId}>
                 <SelectTrigger className="bg-secondary border-border/50">
@@ -185,7 +185,7 @@ const LendingFormPage = () => {
                     <SelectItem key={c.id} value={c.id}>
                       <span className="flex items-center gap-2">
                         <CoinIcon image={c.image} icon={c.icon} symbol={c.symbol} size="sm" />
-                        {c.symbol} — {c.nameKr}
+                        {c.symbol} - {c.nameKr}
                       </span>
                     </SelectItem>
                   ))}
@@ -233,7 +233,7 @@ const LendingFormPage = () => {
 
             {/* Loan Period Select */}
             <div className="space-y-2">
-              <p className="text-sm font-medium">대출 주기</p>
+              <p className="text-sm font-medium">대출 기간</p>
               {plansLoading ? (
                 <p className="text-xs text-muted-foreground">로딩 중...</p>
               ) : (
@@ -247,7 +247,7 @@ const LendingFormPage = () => {
                   <SelectContent>
                     {plans.map((p) => (
                       <SelectItem key={p.id} value={p.id}>
-                        {p.term_days}일 — 이자 {(p.interest_rate * 100).toFixed(0)}%
+                        {p.term_days}일 - 이자 {(p.interest_rate * 100).toFixed(0)}%
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -307,8 +307,8 @@ const LendingFormPage = () => {
               ) : null}
 
               <div className="flex flex-col gap-0.5 text-xs text-muted-foreground">
-                <span>USDT 승인 금액 (예상)</span>
-                <span>≈ {usdtAmount.toFixed(2)} USDT</span>
+                <span>USDT 승인 금액 (예상) ≈ {usdtAmount.toFixed(2)} USDT</span>
+                
               </div>
             </div>
           </>
@@ -316,7 +316,7 @@ const LendingFormPage = () => {
 
         {/* Lending History */}
         <div className="space-y-3 pt-2">
-          <h2 className="text-sm font-semibold">USDT 대출 기록</h2>
+          <h2 className="text-sm font-semibold">대출 기록</h2>
           {orders.length === 0 ? (
             <p className="text-xs text-muted-foreground text-center py-4">기록이 없습니다</p>
           ) : (
@@ -339,10 +339,10 @@ const LendingFormPage = () => {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-medium">{formatKRW(order.total_krw)}</p>
-                    <Badge variant="outline" className={statusBadgeClass(order.status)}>
+                    <p className="text-sm font-medium">{formatKRW(order.total_krw)} <Badge variant="outline" className={statusBadgeClass(order.status)}>
                       {order.status}
-                    </Badge>
+                    </Badge></p>
+
                   </div>
                 </div>
               ))}

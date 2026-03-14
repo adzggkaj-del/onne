@@ -106,7 +106,7 @@ const AuthPage = () => {
                 Crypto<span className="text-gradient">X</span>
               </span>
             </div>
-            <CardTitle className="text-lg">계정에 로그인하세요</CardTitle>
+            <CardTitle className="text-lg"></CardTitle>
           </CardHeader>
           <CardContent>
             <Tabs value={tab} onValueChange={setTab}>
@@ -144,7 +144,7 @@ const AuthPage = () => {
                 <form onSubmit={handleSignUp} className="space-y-4">
                   <div>
                     <Label className="text-muted-foreground">사용자명</Label>
-                    <Input placeholder="닉네임" value={username} onChange={(e) => setUsername(e.target.value)} className="mt-1 bg-secondary border-border/50" />
+                    <Input placeholder="이름" value={username} onChange={(e) => setUsername(e.target.value)} className="mt-1 bg-secondary border-border/50" />
                   </div>
                   <div>
                     <Label className="text-muted-foreground">이메일</Label>
@@ -169,7 +169,7 @@ const AuthPage = () => {
                     </div>
                   </div>
                   <div>
-                    <Label className="text-muted-foreground">휴대폰 번호</Label>
+                    <Label className="text-muted-foreground">전화번호</Label>
                     <Input type="tel" placeholder="010-0000-0000" value={phone} onChange={(e) => setPhone(e.target.value)} className="mt-1 bg-secondary border-border/50" />
                   </div>
                   <Button type="submit" className="w-full gradient-primary text-primary-foreground" disabled={submitting}>

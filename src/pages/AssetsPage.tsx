@@ -120,7 +120,7 @@ const AssetsPage = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Card className="overflow-hidden border-0">
             <div className="gradient-primary p-5">
-              <p className="text-xs text-white/70 mb-1">KRW 잔액</p>
+              <p className="text-xs text-white/70 mb-1">총 보유금액</p>
               {!profile ? (
                 <Skeleton className="h-9 w-36 bg-white/20 mb-2" />
               ) : (
@@ -136,13 +136,13 @@ const AssetsPage = () => {
               <div className="absolute top-3 right-3">
                 <DollarSign className="h-5 w-5 text-primary/40" />
               </div>
-              <p className="text-xs text-muted-foreground mb-1">USDT 잔액</p>
+              <p className="text-xs text-muted-foreground mb-1">총 보유금액</p>
               {!profile ? (
                 <Skeleton className="h-9 w-36 mb-2" />
               ) : (
                 <p className="text-3xl font-bold">{usdtBalance.toLocaleString()} USDT</p>
               )}
-              <p className="text-xs text-muted-foreground mt-2">테더 잔액</p>
+              <p className="text-xs text-muted-foreground mt-2">USDT 잔액</p>
             </div>
           </Card>
         </div>
@@ -196,7 +196,7 @@ const AssetsPage = () => {
         <section>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-base font-bold flex items-center gap-2">
-              <Clock className="h-4 w-4 text-primary" /> 주문 내역
+              <Clock className="h-4 w-4 text-primary" /> 전체 내역
             </h2>
           </div>
 

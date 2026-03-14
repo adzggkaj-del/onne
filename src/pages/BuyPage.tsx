@@ -17,7 +17,6 @@ const BuyPage = () => {
   return (
     <AnimatedPage>
       <div className="p-4 md:p-6 max-w-4xl mx-auto space-y-6">
-        <h1 className="text-2xl font-bold">코인 구매</h1>
         <p className="text-sm text-muted-foreground">시장가 대비 1% 할인된 가격으로 구매하세요</p>
 
         <div className="space-y-2">

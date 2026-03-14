@@ -186,7 +186,7 @@ const DepositDialog = ({ open, onOpenChange }: DepositDialogProps) => {
                     <ArrowLeft className="h-4 w-4" />
                   </Button>
                 )}
-                충전 (입금)
+                충전
               </DialogTitle>
             </DialogHeader>
 
@@ -201,8 +201,8 @@ const DepositDialog = ({ open, onOpenChange }: DepositDialogProps) => {
                     <RadioGroupItem value="krw" id="deposit-krw" />
                     <Banknote className="h-6 w-6 text-primary" />
                     <div>
-                      <p className="font-semibold text-sm">원화 입금</p>
-                      <p className="text-xs text-muted-foreground">고객센터에 문의해주세요</p>
+                      <p className="font-semibold text-sm">원화 입금 </p>
+                      <p class="text-xs text-muted-foreground">고객센터에 문의해주세요.</p>
                     </div>
                   </label>
                   <label className={`flex items-center gap-4 rounded-xl border p-4 cursor-pointer transition-all ${method === "crypto" ? "border-primary bg-primary/5" : "border-border/50 bg-card"}`}>
@@ -215,7 +215,7 @@ const DepositDialog = ({ open, onOpenChange }: DepositDialogProps) => {
                   </label>
                 </RadioGroup>
                 <Button className="w-full gradient-primary text-primary-foreground rounded-xl h-12 font-semibold" onClick={handleConfirm}>
-                  다음 단계
+                  확인
                 </Button>
               </div>
             ) : (
@@ -343,7 +343,7 @@ const DepositDialog = ({ open, onOpenChange }: DepositDialogProps) => {
                                       처리 중...
                                     </>
                                   ) : (
-                                    "다음 단계"
+                                    "다음"
                                   )}
                                 </Button>
                               )}

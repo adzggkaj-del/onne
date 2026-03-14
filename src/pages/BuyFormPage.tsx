@@ -199,24 +199,24 @@ const BuyFormPage = () => {
   const HistorySection = () => (
     <div className="space-y-3 pt-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold">USDT 거래 기록</h2>
-        <Download className="h-4 w-4 text-muted-foreground" />
+        <h2 className="text-sm font-semibold">거래 내역</h2>
+       
       </div>
 
       {ordersLoading ? (
         <div className="text-center py-6 text-sm text-muted-foreground">불러오는 중...</div>
       ) : orders.length === 0 ? (
         <div className="rounded-xl bg-card border border-border/50 p-6 text-center">
-          <p className="text-sm text-muted-foreground">거래 기록이 없습니다</p>
+          <p className="text-sm text-muted-foreground">거래 내역이 없습니다</p>
         </div>
       ) : (
         <div className="rounded-xl bg-card border border-border/50 divide-y divide-border/30 overflow-hidden">
           {/* Header */}
           <div className="grid grid-cols-4 px-4 py-2.5 text-xs text-muted-foreground">
-            <span>시간</span>
-            <span className="text-center">거래 수량</span>
-            <span className="text-center">총액(KRW)</span>
-            <span className="text-right">거래 상태</span>
+            <span>날짜시간</span>
+            <span className="text-center">수량</span>
+            <span className="text-center">금액</span>
+            <span className="text-right">상태</span>
           </div>
           {orders.map((order) => (
             <div key={order.id} className="grid grid-cols-4 px-4 py-3 text-sm items-center">
@@ -268,18 +268,15 @@ const BuyFormPage = () => {
       <div className="p-4 md:p-6 max-w-lg mx-auto space-y-5">
         {/* Back */}
         <Button variant="ghost" size="sm" className="gap-1.5 -ml-2 text-muted-foreground" onClick={() => step === 2 ? setStep(1) : navigate("/buy")}>
-          <ArrowLeft className="h-4 w-4" /> 뒤로
+          <ArrowLeft className="h-4 w-4 " /> 뒤로
         </Button>
 
         {step === 1 ? (
           <>
-            {/* Title */}
-            <h1 className="text-2xl font-bold">매수</h1>
-
             {/* Coin select */}
             <div className="space-y-2">
               <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
-                <Check className="h-3.5 w-3.5 text-emerald-500" /> 선택 비종
+                <Check className="h-3.5 w-3.5 text-emerald-500" /> 선택 코인
               </Label>
               <Select value={selectedCoinId} onValueChange={setSelectedCoinId}>
                 <SelectTrigger className="bg-card border-border/50 rounded-xl h-12">
@@ -330,8 +327,8 @@ const BuyFormPage = () => {
                     <SelectContent>
                       <SelectItem value="funding">
                         <div className="flex items-center justify-between w-full gap-4">
-                          <span>자금 계좌</span>
-                          <span className="text-muted-foreground text-xs">사용 가능 ₩{krwBalance.toLocaleString("ko-KR", { maximumFractionDigits: 0 })} KRW</span>
+                          <span>자산 계좌</span>
+                          <span className="text-muted-foreground text-xs"> 보유 금액 ₩{krwBalance.toLocaleString("ko-KR", { maximumFractionDigits: 0 })} KRW</span>
                         </div>
                       </SelectItem>
                       <SelectItem value="trading">
@@ -343,7 +340,7 @@ const BuyFormPage = () => {
 
                 {/* Price input (red border) */}
                 <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">입력 가격</Label>
+                  <Label className="text-xs text-muted-foreground">가격</Label>
                   <Input
                     type="number"
                     placeholder="₩0"
@@ -356,7 +353,7 @@ const BuyFormPage = () => {
                         setAmount(p > 0 ? (p / buyPrice).toFixed(6) : "");
                       }
                     }}
-                    className="bg-card border-destructive rounded-xl h-12 text-sm"
+                    className="bg-card border-border/50 rounded-xl h-12 text-sm"
                     min="0"
                     step="any"
                   />
@@ -390,14 +387,14 @@ const BuyFormPage = () => {
                     <span className="ml-2 font-medium">₩{buyPrice.toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</span>
                   </div>
                   <div>
-                    <span className="text-muted-foreground">통계</span>
+                    <span className="text-muted-foreground">총액</span>
                     <span className="ml-2 font-medium">₩{totalKrw.toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</span>
                   </div>
                 </div>
 
                 {/* Receiving wallet address */}
                 <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">수령 주소</Label>
+                  <Label className="text-xs text-muted-foreground">받을 지갑 주소</Label>
                   <Input
                     type="text"
                     placeholder="지갑 주소를 입력하세요"
@@ -413,7 +410,7 @@ const BuyFormPage = () => {
                   onClick={() => setStep(2)}
                   disabled={!canGoNext}
                 >
-                  다음 페이지
+                  다음
                 </Button>
               </>
             )}
@@ -424,7 +421,6 @@ const BuyFormPage = () => {
           <>
             {/* Step 2 */}
             <div>
-              <h1 className="text-2xl font-bold">매수 제 2 페이지</h1>
               <p className="text-xs text-muted-foreground mt-1">네트워크 &gt; 코인 구매 &gt; 확인</p>
             </div>
 
@@ -432,12 +428,11 @@ const BuyFormPage = () => {
             <Card className="border-border/50 rounded-xl overflow-hidden">
               <CardContent className="p-0 divide-y divide-border/30">
                 {[
-                  ["비종", selectedCoin?.symbol ?? ""],
+                  ["코인", selectedCoin?.symbol ?? ""],
                   ["네트워크", selectedChain?.name ?? ""],
-                  ["가격", `₩${totalKrw.toLocaleString("ko-KR", { maximumFractionDigits: 0 })}`],
                   ["수량", `${amount} ${selectedCoin?.symbol ?? ""}`],
                   ["단가", `₩${buyPrice.toLocaleString("ko-KR", { maximumFractionDigits: 0 })}`],
-                  ["총 가격", `₩${totalKrw.toLocaleString("ko-KR", { maximumFractionDigits: 0 })}`],
+                  ["총액", `₩${totalKrw.toLocaleString("ko-KR", { maximumFractionDigits: 0 })}`],
                   ["USDT 가격", `${usdtPrice.toFixed(2)} USDT`],
                   ["지갑 주소", walletAddress],
                 ].map(([label, value]) => (
@@ -451,22 +446,22 @@ const BuyFormPage = () => {
 
             {/* Payment method */}
             <div className="space-y-4">
-              <h2 className="text-sm font-semibold">지불 방식</h2>
+              <h2 className="text-sm font-semibold">구매 방식</h2>
               <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="space-y-3">
                 <div className="flex items-center gap-3 rounded-xl bg-card border border-border/50 p-4 cursor-pointer" onClick={() => setPaymentMethod("krw")}>
                   <RadioGroupItem value="krw" id="pay-krw" />
-                  <Label htmlFor="pay-krw" className="text-sm cursor-pointer">한화 충전</Label>
+                  <Label htmlFor="pay-krw" className="text-sm cursor-pointer">은행 계좌(은행 송금)로 구매</Label>
                 </div>
                 <div className="flex items-center gap-3 rounded-xl bg-card border border-border/50 p-4 cursor-pointer" onClick={() => setPaymentMethod("crypto")}>
                   <RadioGroupItem value="crypto" id="pay-crypto" />
-                  <Label htmlFor="pay-crypto" className="text-sm cursor-pointer">암호화폐</Label>
+                  <Label htmlFor="pay-crypto" className="text-sm cursor-pointer">암호화폐 구매</Label>
                 </div>
               </RadioGroup>
 
               {paymentMethod === "krw" ? (
                 <div className="space-y-3">
                   <div className="rounded-xl bg-accent/10 border border-accent/30 p-4 text-sm text-muted-foreground">
-                    잔액에서 ₩{totalKrw.toLocaleString("ko-KR", { maximumFractionDigits: 0 })} 이 차감됩니다.
+                    보유 잔액에서 ₩{totalKrw.toLocaleString("ko-KR", { maximumFractionDigits: 0 })} 이 차감됩니다.
                   </div>
                   <Button
                     className="w-full bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl h-12 font-semibold"
@@ -476,7 +471,7 @@ const BuyFormPage = () => {
                     {submitting ? (
                       <><Loader2 className="h-4 w-4 animate-spin mr-2" /> 처리 중...</>
                     ) : krwBalance < totalKrw ? (
-                      "잔액 부족"
+                      "확인"
                     ) : (
                       "잔액으로 구매"
                     )}
@@ -484,7 +479,7 @@ const BuyFormPage = () => {
                 </div>
               ) : platformAddress ? (
                 <div className="rounded-xl bg-card border border-border/50 p-4 space-y-3">
-                  <p className="text-xs text-muted-foreground">USDT 송금 주소</p>
+                  <p className="text-xs text-muted-foreground">USDT 입금 주소</p>
                   <div className="flex flex-col items-center gap-3">
                     <img
                       src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(platformAddress)}`}

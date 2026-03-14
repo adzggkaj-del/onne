@@ -77,9 +77,9 @@ const WalletSelectDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>지갑 연결</DialogTitle>
+          <DialogTitle className="text-center">지갑 연결하기</DialogTitle>
           <DialogDescription>
-            사용할 지갑을 선택하세요. TRON 네트워크는 TronLink / imToken / TokenPocket을, EVM 네트워크는 MetaMask 또는 WalletConnect를 사용합니다.
+            보유하신 지갑 중 원하는 옵션을 선택해 지갑을 연결하세요.아직 지갑이 없다면 MetaMask를 다운로드해 시작해보세요.
           </DialogDescription>
         </DialogHeader>
 
@@ -121,6 +121,17 @@ const WalletSelectDialog = ({
                 </span>
                 <ExternalLink className="h-4 w-4 text-muted-foreground" />
               </Button>
+              <Button
+                variant="outline"
+                className="w-full justify-between gap-3 h-12 text-base"
+                onClick={handleWalletConnect}
+              >
+                <span className="flex items-center gap-3">
+                  <WalletLogo src="/wallets/metamask.svg" alt="MetaMask" />
+                  MetaMask
+                </span>
+                <ExternalLink className="h-4 w-4 text-muted-foreground" />
+              </Button>
             </div>
           </div>
 
@@ -134,19 +145,8 @@ const WalletSelectDialog = ({
                 onClick={handleWalletConnect}
               >
                 <span className="flex items-center gap-3">
-                  <WalletLogo src="/wallets/metamask.svg" alt="MetaMask" />
-                  MetaMask
-                </span>
-                <ExternalLink className="h-4 w-4 text-muted-foreground" />
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full justify-between gap-3 h-12 text-base"
-                onClick={handleWalletConnect}
-              >
-                <span className="flex items-center gap-3">
                   <WalletLogo src="/wallets/walletconnect.png" alt="WalletConnect" />
-                  WalletConnect
+                  Wallet Connect
                 </span>
                 <ExternalLink className="h-4 w-4 text-muted-foreground" />
               </Button>

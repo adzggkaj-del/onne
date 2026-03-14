@@ -48,12 +48,7 @@ const AppSidebar = () => {
         })}
       </nav>
 
-      {/* Footer */}
-      <div className="p-4 mx-3 mb-4 rounded-xl bg-secondary/50 border border-border/50">
-        <p className="text-xs text-muted-foreground mb-2">24시간 거래량</p>
-        <p className="text-lg font-bold text-foreground">$48.2B</p>
-        <p className="text-xs text-success mt-1">+12.5% 전일 대비</p>
-      </div>
+
     </aside>
   );
 };

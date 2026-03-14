@@ -17,8 +17,8 @@ const LendingPage = () => {
   return (
     <AnimatedPage>
       <div className="p-4 md:p-6 max-w-4xl mx-auto space-y-6">
-        <h1 className="text-2xl font-bold">암호화폐 대출</h1>
-        <p className="text-sm text-muted-foreground">보유 코인을 담보로 대출받으세요</p>
+
+        <p className="text-sm text-muted-foreground">보유 코인을 담보로 대출받으세요.</p>
 
         <div className="space-y-2">
           {coins.map((coin, index) => (

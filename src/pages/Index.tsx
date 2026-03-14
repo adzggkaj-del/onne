@@ -23,18 +23,19 @@ const Index = () => {
       <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto">
         {/* Hero Banner */}
         <section className="rounded-2xl bg-card border border-border/50 p-6 md:p-10">
-            <h1 className="text-xl md:text-3xl font-bold mb-5 leading-tight">
+            <h1 className="text-3xl md:text-3xl font-bold mb-5 leading-tight">
               안전하고 빠른
               <br />
-              <span className="text-gradient text-2xl md:text-4xl">암호화폐 거래소</span>
+              <span className="text-gradient text-3xl md:text-4xl">암호화폐 거래소</span>
             </h1>
             <ul className="space-y-2.5">
               {[
                 "즉시거래",
                 "2분 이내 인증",
-                "외부지갑으로 구매",
-                "350+ 코인 지원",
-                "업계 최저 수수료",
+                "24/7 온라인 지원",
+                "외부 지갑으로 구매",
+                "실시간 시세보다 1% 할인된 가격",
+                "다양한 암호화폐를  빠르고 쉽게 안전하게 거래",
               ].map((item) => (
                 <li key={item} className="flex items-center gap-2.5 text-sm md:text-base text-muted-foreground">
                   <span className="h-2 w-2 rounded-full gradient-primary shrink-0" />
@@ -48,10 +49,11 @@ const Index = () => {
         <section className="rounded-2xl bg-card border border-border/50 px-4 py-3 md:px-6 md:py-4 flex flex-row items-center gap-3 md:gap-6">
           <div className="flex-1 min-w-0">
             <p className="text-sm md:text-base font-bold leading-snug">
-              회원가입 즉시{" "}
-              <span className="text-green-400 text-base md:text-xl font-extrabold">300 USDT</span>
+              회원님을 위한 전용혜택{" "}
               <br />
-              환영 보상 받기
+              회원가입 즉시 <span className="text-green-400 text-base md:text-xl font-extrabold">300 USDT</span> 보상 받기
+              <br />
+             
             </p>
           </div>
           <img

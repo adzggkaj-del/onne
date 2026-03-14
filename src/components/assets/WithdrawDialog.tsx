@@ -208,7 +208,7 @@ const WithdrawDialog = ({ open, onOpenChange }: WithdrawDialogProps) => {
                   </label>
                 </RadioGroup>
                 <Button className="w-full gradient-primary text-primary-foreground rounded-xl h-12 font-semibold" onClick={() => setStep(withdrawMethod)}>
-                  다음 단계
+                  확인
                 </Button>
               </div>
             )}
@@ -308,9 +308,9 @@ const WithdrawDialog = ({ open, onOpenChange }: WithdrawDialogProps) => {
                     {selectedChain && (
                       <>
                         <div className="space-y-2">
-                          <Label className="text-xs text-muted-foreground">지갑 주소</Label>
+                          <Label className="text-xs text-muted-foreground">출금 지갑 주소</Label>
                           <Input
-                            placeholder="지갑 주소를 입력하세요"
+                            placeholder="출금 지갑 주소를 입력하세요"
                             value={walletAddress}
                             onChange={(e) => setWalletAddress(e.target.value)}
                             className="bg-card border-border/50 rounded-xl h-12 font-mono text-sm"
