@@ -321,36 +321,49 @@ const LendingFormPage = () => {
         {/* Lending History */}
         <div className="space-y-3 pt-2">
           <h2 className="text-sm font-semibold">대출 기록</h2>
-          {orders.length === 0 ? (
+          {orders.length === 0 && totalCount === 0 ? (
             <p className="text-xs text-muted-foreground text-center py-4">기록이 없습니다</p>
           ) : (
-            <div className="space-y-2">
-              {orders.map((order) => (
-                <div key={order.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
-                  <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
-                      {order.coin_symbol.slice(0, 2)}
+            <>
+              <div className="space-y-2">
+                {orders.map((order) => (
+                  <div key={order.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
+                        {order.coin_symbol.slice(0, 2)}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">{order.coin_symbol} · {order.amount.toLocaleString()}</p>
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {formatDate(order.created_at)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          기간: {order.term_days ? `${order.term_days}일` : "-"} · 상환일: {order.repayment_date ? new Date(order.repayment_date).toLocaleDateString("ko-KR") : "-"}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-medium">{order.coin_symbol} · {order.amount.toLocaleString()}</p>
-                      <p className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {formatDate(order.created_at)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        기간: {order.term_days ? `${order.term_days}일` : "-"} · 상환일: {order.repayment_date ? new Date(order.repayment_date).toLocaleDateString("ko-KR") : "-"}
-                      </p>
+                    <div className="text-right">
+                      <p className="text-sm font-medium">{formatKRW(order.total_krw)} <Badge variant="outline" className={statusBadgeClass(order.status)}>
+                        {order.status}
+                      </Badge></p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium">{formatKRW(order.total_krw)} <Badge variant="outline" className={statusBadgeClass(order.status)}>
-                      {order.status}
-                    </Badge></p>
+                ))}
+              </div>
 
-                  </div>
+              {Math.ceil(totalCount / PAGE_SIZE) > 1 && (
+                <div className="flex items-center justify-between pt-2">
+                  <Button variant="outline" size="sm" className="gap-1 border-border/50" disabled={page === 0} onClick={() => setPage((p) => Math.max(0, p - 1))}>
+                    <ChevronLeft className="h-4 w-4" /> 이전
+                  </Button>
+                  <span className="text-xs text-muted-foreground">{page + 1} / {Math.ceil(totalCount / PAGE_SIZE)}</span>
+                  <Button variant="outline" size="sm" className="gap-1 border-border/50" disabled={page >= Math.ceil(totalCount / PAGE_SIZE) - 1} onClick={() => setPage((p) => p + 1)}>
+                    다음 <ChevronRight className="h-4 w-4" />
+                  </Button>
                 </div>
-              ))}
-            </div>
+              )}
+            </>
           )}
         </div>
       </div>

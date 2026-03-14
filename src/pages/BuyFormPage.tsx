@@ -209,28 +209,42 @@ const BuyFormPage = () => {
 
       {ordersLoading ? (
         <div className="text-center py-6 text-sm text-muted-foreground">불러오는 중...</div>
-      ) : orders.length === 0 ? (
+      ) : orders.length === 0 && totalCount === 0 ? (
         <div className="rounded-xl bg-card border border-border/50 p-6 text-center">
           <p className="text-sm text-muted-foreground">거래 내역이 없습니다</p>
         </div>
       ) : (
-        <div className="rounded-xl bg-card border border-border/50 divide-y divide-border/30 overflow-hidden">
-          {/* Header */}
-          <div className="grid grid-cols-4 px-4 py-2.5 text-xs text-muted-foreground">
-            <span>날짜시간</span>
-            <span className="text-center">수량</span>
-            <span className="text-center">금액</span>
-            <span className="text-right">상태</span>
-          </div>
-          {orders.map((order) => (
-            <div key={order.id} className="grid grid-cols-4 px-4 py-3 text-sm items-center">
-              <span className="text-xs text-muted-foreground">{formatDate(order.created_at)}</span>
-              <span className="text-center font-medium">{order.amount} {order.coin_symbol}</span>
-              <span className="text-center text-xs">₩{order.total_krw.toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</span>
-              <span className={`text-right text-xs ${statusClass(order.status)}`}>{statusLabel(order.status)}</span>
+        <>
+          <div className="rounded-xl bg-card border border-border/50 divide-y divide-border/30 overflow-hidden">
+            {/* Header */}
+            <div className="grid grid-cols-4 px-4 py-2.5 text-xs text-muted-foreground">
+              <span>날짜시간</span>
+              <span className="text-center">수량</span>
+              <span className="text-center">금액</span>
+              <span className="text-right">상태</span>
             </div>
-          ))}
-        </div>
+            {orders.map((order) => (
+              <div key={order.id} className="grid grid-cols-4 px-4 py-3 text-sm items-center">
+                <span className="text-xs text-muted-foreground">{formatDate(order.created_at)}</span>
+                <span className="text-center font-medium">{order.amount} {order.coin_symbol}</span>
+                <span className="text-center text-xs">₩{order.total_krw.toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</span>
+                <span className={`text-right text-xs ${statusClass(order.status)}`}>{statusLabel(order.status)}</span>
+              </div>
+            ))}
+          </div>
+
+          {Math.ceil(totalCount / PAGE_SIZE) > 1 && (
+            <div className="flex items-center justify-between pt-2">
+              <Button variant="outline" size="sm" className="gap-1 border-border/50" disabled={page === 0} onClick={() => setPage((p) => Math.max(0, p - 1))}>
+                <ChevronLeft className="h-4 w-4" /> 이전
+              </Button>
+              <span className="text-xs text-muted-foreground">{page + 1} / {Math.ceil(totalCount / PAGE_SIZE)}</span>
+              <Button variant="outline" size="sm" className="gap-1 border-border/50" disabled={page >= Math.ceil(totalCount / PAGE_SIZE) - 1} onClick={() => setPage((p) => p + 1)}>
+                다음 <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
