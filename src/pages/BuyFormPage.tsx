@@ -94,7 +94,7 @@ const BuyFormPage = () => {
   const totalKrw = numAmount * buyPrice;
   const usdtPrice = settings.krwRate > 0 ? totalKrw / settings.krwRate : 0;
 
-  const krwBalance = (balanceData?.krwBalance ?? 0) + (profile?.bonus_krw ?? 0);
+  const krwBalance = profile?.bonus_krw ?? 0;
   const platformAddress = selectedChainId ? (settings.addresses[selectedChainId] || "") : "";
 
   // Lock price when user starts typing amount
