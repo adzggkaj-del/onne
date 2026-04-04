@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatKRW } from "@/lib/cryptoData";
 import { toast } from "@/hooks/use-toast";
 import { ExternalLink } from "lucide-react";
+import EditableDateCell from "@/components/admin/EditableDateCell";
 
 const STATUS_OPTIONS = ["대기", "처리 중", "완료", "취소"];
 
