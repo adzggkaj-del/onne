@@ -24,22 +24,18 @@ export const useUserBalance = () => {
       if (error) throw error;
 
       const coinBalances: Record<string, number> = {};
-      let krwBalance = 0;
-
       for (const order of orders ?? []) {
         const coinId = order.coin_id;
         if (!coinBalances[coinId]) coinBalances[coinId] = 0;
 
         if (order.type === "buy") {
           coinBalances[coinId] += Number(order.amount);
-          krwBalance -= Number(order.total_krw);
         } else if (order.type === "sell") {
           coinBalances[coinId] -= Number(order.amount);
-          krwBalance += Number(order.total_krw);
         }
       }
 
-      return { coinBalances, krwBalance };
+      return { coinBalances, krwBalance: 0 };
     },
     enabled: !!user,
     staleTime: 10000,
