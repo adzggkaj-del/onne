@@ -117,7 +117,7 @@ const AdminLendingOrders = () => {
               <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground">로딩 중...</TableCell></TableRow>
             ) : orders.map((o) => (
               <TableRow key={o.id}>
-                <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{new Date(o.created_at).toLocaleString("ko-KR")}</TableCell>
+                <TableCell><EditableDateCell value={o.created_at} onSave={(d) => updateDate.mutate({ id: o.id, created_at: d })} /></TableCell>
                 <TableCell className="font-semibold text-sm">{o.coin_symbol}</TableCell>
                 <TableCell className="text-sm">{o.amount}</TableCell>
                 <TableCell className="text-sm">{formatKRW(o.total_krw)}</TableCell>
