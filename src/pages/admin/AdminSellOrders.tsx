@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatKRW } from "@/lib/cryptoData";
 import { toast } from "@/hooks/use-toast";
 import { ExternalLink, CheckCircle, XCircle, Building2, User, CreditCard, Banknote } from "lucide-react";
+import EditableDateCell from "@/components/admin/EditableDateCell";
 
 const STATUS_OPTIONS = ["대기", "처리 중", "완료", "취소"];
 
