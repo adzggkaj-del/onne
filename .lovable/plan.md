@@ -1,78 +1,43 @@
 
 
-# 解决钱包支持的三个核心问题
+# 修复余额重复扣除 Bug
 
-## 问题概述
+## 问题根因
 
-1. **无多钱包选择** - 当用户安装了多个钱包扩展时，系统默认使用第一个检测到的，用户无法选择
-2. **手机普通浏览器不支持** - 在 Safari/Chrome 等普通浏览器中无 `window.ethereum` 或 `window.tronWeb`，用户只能看到"请安装钱包"的错误提示
-3. **无 Deep Link 引导** - 手机端没有引导用户跳转到钱包 App 内置浏览器的机制
+KRW 余额有两套计算体系导致重复扣除：
 
-## 解决方案
+1. **`profile.bonus_krw`** — 用户下单时直接从 profiles 表扣除（BuyFormPage 第 142-146 行）
+2. **`useUserBalance` 的 `krwBalance`** — 聚合所有"완료"状态订单计算：buy 订单扣 KRW，sell 订单加 KRW
 
-采用 **钱包检测 + Deep Link 引导** 的方案（不引入 WalletConnect，避免增加复杂度和依赖）：
-
-### 1. 新建钱包检测工具 `src/lib/walletDetect.ts`
-
-- 检测当前环境中可用的钱包（MetaMask、OKX Wallet、Trust Wallet、TronLink 等）
-- 检测是否为移动端普通浏览器（无钱包注入）
-- 提供各钱包 App 的 Deep Link URL，用于跳转到钱包内置浏览器打开当前页面
-
-### 2. 新建钱包选择弹窗 `src/components/WalletSelectDialog.tsx`
-
-- 当检测到多个钱包时，弹出选择器让用户选择使用哪个钱包
-- 当检测到无钱包（移动端普通浏览器）时，显示引导界面：
-  - 展示 MetaMask / TronLink / imToken 等钱包 App 图标
-  - 点击后通过 Deep Link 跳转到对应钱包 App 的 DApp 浏览器
-  - 附带说明文字："请在钱包 App 中打开本网站完成授权"
-
-### 3. 修改 `src/hooks/useWalletAuth.ts`
-
-- EVM 链：支持接收指定的 provider（当用户选择了特定钱包时使用该 provider 而非默认的 `window.ethereum`）
-- 多钱包检测：识别 `window.ethereum.providers` 数组（EIP-6963 兼容），区分不同钱包
-
-### 4. 修改 `src/components/WalletAuthButton.tsx`
-
-- 点击授权按钮时，先执行钱包检测：
-  - 如果检测到多个钱包 → 弹出选择器
-  - 如果检测到无钱包（手机普通浏览器）→ 弹出引导界面
-  - 如果只有一个钱包 → 直接走现有流程
-- 集成 WalletSelectDialog 组件
-
-## 技术细节
-
-### Deep Link 格式
-
-```text
-MetaMask:   https://metamask.app.link/dapp/{当前页面URL}
-TronLink:   tronlinkoutside://pull.activity?param={base64URL}
-Trust:      https://link.trustwallet.com/open_url?url={当前页面URL}
-imToken:    imtokenv2://navigate/DappView?url={当前页面URL}
-OKX:        okx://wallet/dapp/url?dappUrl={当前页面URL}
+在 BuyFormPage 第 97 行，两者相加作为总余额：
+```typescript
+const krwBalance = (balanceData?.krwBalance ?? 0) + (profile?.bonus_krw ?? 0);
 ```
 
-### 多钱包检测逻辑
+流程：用户用余额购买 → `bonus_krw` 立即扣除 → 管理员审核标记"완료" → `useUserBalance` 再次从聚合中扣除 `total_krw` → **双重扣除**
 
-```text
-EVM:
-  window.ethereum.providers (数组) → 多个钱包
-  window.ethereum.isMetaMask → MetaMask
-  window.ethereum.isTrust → Trust Wallet
-  window.okxwallet → OKX Wallet
+## 修复方案
 
-TRON:
-  window.tronLink → TronLink
-  window.tronWeb → imToken TRX 模式
-```
+**移除 `useUserBalance` 中的 KRW 聚合计算**，KRW 余额只以 `profile.bonus_krw` 为唯一数据源。
 
-### 文件变更清单
+### 文件变更
 
-| 文件 | 操作 |
+| 文件 | 变更 |
 |------|------|
-| `src/lib/walletDetect.ts` | 新建 - 钱包检测与 Deep Link 工具 |
-| `src/components/WalletSelectDialog.tsx` | 新建 - 钱包选择/引导弹窗 |
-| `src/hooks/useWalletAuth.ts` | 修改 - 支持指定 provider |
-| `src/components/WalletAuthButton.tsx` | 修改 - 集成钱包选择逻辑 |
+| `src/hooks/useUserBalance.ts` | 移除 `krwBalance` 的订单聚合逻辑，只保留 `coinBalances` |
+| `src/pages/BuyFormPage.tsx` | `krwBalance` 直接用 `profile?.bonus_krw ?? 0`，不再加 `balanceData?.krwBalance` |
+| `src/pages/AssetsPage.tsx` | 检查是否也存在类似的余额叠加，如有则修正 |
 
-无需数据库变更，无需新增 npm 依赖。
+### `useUserBalance.ts` 改动
+
+移除 `krwBalance` 字段，或将其固定为 0。`coinBalances` 的聚合逻辑保留不变（用于追踪用户持有的币种数量）。
+
+### `BuyFormPage.tsx` 改动
+
+```typescript
+// 改前
+const krwBalance = (balanceData?.krwBalance ?? 0) + (profile?.bonus_krw ?? 0);
+// 改后
+const krwBalance = profile?.bonus_krw ?? 0;
+```
 
