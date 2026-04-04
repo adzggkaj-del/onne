@@ -83,6 +83,18 @@ const AdminBuyOrders = () => {
     onError: (e: Error) => toast({ title: "오류", description: e.message, variant: "destructive" }),
   });
 
+  const updateDate = useMutation({
+    mutationFn: async ({ id, created_at }: { id: string; created_at: string }) => {
+      const { error } = await supabase.from("orders").update({ created_at }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-buy-orders"] });
+      toast({ title: "날짜가 업데이트되었습니다" });
+    },
+    onError: (e: Error) => toast({ title: "오류", description: e.message, variant: "destructive" }),
+  });
+
   return (
     <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-6">
       <h1 className="text-2xl font-bold">매수 주문</h1>
