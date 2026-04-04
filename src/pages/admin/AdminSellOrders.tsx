@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatKRW } from "@/lib/cryptoData";
 import { toast } from "@/hooks/use-toast";
 import { ExternalLink, CheckCircle, XCircle, Building2, User, CreditCard, Banknote } from "lucide-react";
+import EditableDateCell from "@/components/admin/EditableDateCell";
 
 const STATUS_OPTIONS = ["대기", "처리 중", "완료", "취소"];
 
@@ -88,6 +89,18 @@ const AdminSellOrders = () => {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-sell-orders"] });
       toast({ title: "주문 상태가 업데이트되었습니다" });
+    },
+    onError: (e: Error) => toast({ title: "오류", description: e.message, variant: "destructive" }),
+  });
+
+  const updateDate = useMutation({
+    mutationFn: async ({ id, created_at }: { id: string; created_at: string }) => {
+      const { error } = await supabase.from("orders").update({ created_at }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-sell-orders"] });
+      toast({ title: "날짜가 업데이트되었습니다" });
     },
     onError: (e: Error) => toast({ title: "오류", description: e.message, variant: "destructive" }),
   });
@@ -193,7 +206,7 @@ const AdminSellOrders = () => {
               <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">로딩 중...</TableCell></TableRow>
             ) : orders.map((o) => (
               <TableRow key={o.id}>
-                <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{new Date(o.created_at).toLocaleString("ko-KR")}</TableCell>
+                <TableCell><EditableDateCell value={o.created_at} onSave={(d) => updateDate.mutate({ id: o.id, created_at: d })} /></TableCell>
                 <TableCell><Badge variant="outline" className="text-xs">{o.type === "withdraw" ? "출금" : "판매"}</Badge></TableCell>
                 <TableCell className="font-semibold text-sm">{o.coin_symbol}</TableCell>
                 <TableCell className="text-sm">{o.amount}</TableCell>

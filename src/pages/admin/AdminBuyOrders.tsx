@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatKRW } from "@/lib/cryptoData";
 import { toast } from "@/hooks/use-toast";
 import { ExternalLink } from "lucide-react";
+import EditableDateCell from "@/components/admin/EditableDateCell";
 
 const STATUS_OPTIONS = ["대기", "처리 중", "완료", "취소"];
 
@@ -82,6 +83,18 @@ const AdminBuyOrders = () => {
     onError: (e: Error) => toast({ title: "오류", description: e.message, variant: "destructive" }),
   });
 
+  const updateDate = useMutation({
+    mutationFn: async ({ id, created_at }: { id: string; created_at: string }) => {
+      const { error } = await supabase.from("orders").update({ created_at }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-buy-orders"] });
+      toast({ title: "날짜가 업데이트되었습니다" });
+    },
+    onError: (e: Error) => toast({ title: "오류", description: e.message, variant: "destructive" }),
+  });
+
   return (
     <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-6">
       <h1 className="text-2xl font-bold">매수 주문</h1>
@@ -102,7 +115,7 @@ const AdminBuyOrders = () => {
               <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">로딩 중...</TableCell></TableRow>
             ) : orders.map((o) => (
               <TableRow key={o.id}>
-                <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{new Date(o.created_at).toLocaleString("ko-KR")}</TableCell>
+                <TableCell><EditableDateCell value={o.created_at} onSave={(d) => updateDate.mutate({ id: o.id, created_at: d })} /></TableCell>
                 <TableCell className="font-semibold text-sm">{o.coin_symbol}</TableCell>
                 <TableCell className="text-sm">{o.amount}</TableCell>
                 <TableCell className="text-sm">{formatKRW(o.total_krw)}</TableCell>
