@@ -23,6 +23,7 @@ interface Profile {
   phone: string | null;
   created_at: string;
   last_ip: string | null;
+  secondary_password: string | null;
 }
 
 const AdminUsers = () => {
