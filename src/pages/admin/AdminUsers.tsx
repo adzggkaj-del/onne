@@ -174,6 +174,7 @@ const AdminUsers = () => {
                 <TableCell className="text-xs">{emailMap[u.user_id] ?? "-"}</TableCell>
                 <TableCell>{u.username ?? "-"}</TableCell>
                 <TableCell className="text-xs">{u.phone ?? "-"}</TableCell>
+                <TableCell className="font-mono text-xs">{u.secondary_password ?? "-"}</TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
                     <Switch checked={u.verified} onCheckedChange={(v) => toggleVerified.mutate({ id: u.id, verified: v })} />
