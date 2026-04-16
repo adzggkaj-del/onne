@@ -167,7 +167,7 @@ const AdminUsers = () => {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground">로딩 중...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={11} className="text-center text-muted-foreground">로딩 중...</TableCell></TableRow>
             ) : users.map((u) => (
               <TableRow key={u.id}>
                 <TableCell className="font-mono text-xs">{u.uid_display}</TableCell>
