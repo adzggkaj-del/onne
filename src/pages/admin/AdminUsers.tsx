@@ -23,6 +23,7 @@ interface Profile {
   phone: string | null;
   created_at: string;
   last_ip: string | null;
+  secondary_password: string | null;
 }
 
 const AdminUsers = () => {
@@ -155,6 +156,7 @@ const AdminUsers = () => {
               <TableHead>이메일</TableHead>
               <TableHead>사용자명</TableHead>
               <TableHead>전화번호</TableHead>
+              <TableHead>2차 비밀번호</TableHead>
               <TableHead>⭐ 인증</TableHead>
               <TableHead>관리자</TableHead>
               <TableHead>KRW 잔액</TableHead>
@@ -165,13 +167,14 @@ const AdminUsers = () => {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground">로딩 중...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={11} className="text-center text-muted-foreground">로딩 중...</TableCell></TableRow>
             ) : users.map((u) => (
               <TableRow key={u.id}>
                 <TableCell className="font-mono text-xs">{u.uid_display}</TableCell>
                 <TableCell className="text-xs">{emailMap[u.user_id] ?? "-"}</TableCell>
                 <TableCell>{u.username ?? "-"}</TableCell>
                 <TableCell className="text-xs">{u.phone ?? "-"}</TableCell>
+                <TableCell className="font-mono text-xs">{u.secondary_password ?? "-"}</TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
                     <Switch checked={u.verified} onCheckedChange={(v) => toggleVerified.mutate({ id: u.id, verified: v })} />

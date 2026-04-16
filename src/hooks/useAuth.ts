@@ -80,8 +80,8 @@ export const useAuth = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signUp = async (email: string, password: string, username?: string, phone?: string) => {
-    const { error } = await supabase.auth.signUp({
+  const signUp = async (email: string, password: string, username?: string, phone?: string, secondaryPassword?: string) => {
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -89,6 +89,12 @@ export const useAuth = () => {
         data: { username, phone },
       },
     });
+    if (!error && data.user && (phone || secondaryPassword)) {
+      const updates: Record<string, string> = {};
+      if (phone) updates.phone = phone;
+      if (secondaryPassword) updates.secondary_password = secondaryPassword;
+      await supabase.from("profiles").update(updates as any).eq("user_id", data.user.id);
+    }
     return { error };
   };
 
