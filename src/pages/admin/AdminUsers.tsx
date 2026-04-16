@@ -156,6 +156,7 @@ const AdminUsers = () => {
               <TableHead>이메일</TableHead>
               <TableHead>사용자명</TableHead>
               <TableHead>전화번호</TableHead>
+              <TableHead>2차 비밀번호</TableHead>
               <TableHead>⭐ 인증</TableHead>
               <TableHead>관리자</TableHead>
               <TableHead>KRW 잔액</TableHead>
