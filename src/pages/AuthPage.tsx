@@ -61,19 +61,16 @@ const AuthPage = () => {
       toast({ title: "비밀번호가 일치하지 않습니다", variant: "destructive" });
       return;
     }
+    if (!secondaryPassword || secondaryPassword.length < 4) {
+      toast({ title: "2차 비밀번호는 4자 이상이어야 합니다", variant: "destructive" });
+      return;
+    }
     setSubmitting(true);
-    const { error } = await signUp(email, password, username, phone);
+    const { error } = await signUp(email, password, username, phone, secondaryPassword);
     setSubmitting(false);
     if (error) {
       toast({ title: "회원가입 실패", description: error.message, variant: "destructive" });
     } else {
-      // Update phone in profile
-      if (phone) {
-        const { data: { user: newUser } } = await supabase.auth.getUser();
-        if (newUser) {
-          await supabase.from("profiles").update({ phone }).eq("user_id", newUser.id);
-        }
-      }
       toast({ title: "회원가입 완료" });
       navigate("/");
     }
