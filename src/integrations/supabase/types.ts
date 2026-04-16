@@ -181,6 +181,7 @@ export type Database = {
           id: string
           last_ip: string | null
           phone: string | null
+          secondary_password: string | null
           uid_display: string | null
           updated_at: string
           usdt_balance: number
@@ -195,6 +196,7 @@ export type Database = {
           id?: string
           last_ip?: string | null
           phone?: string | null
+          secondary_password?: string | null
           uid_display?: string | null
           updated_at?: string
           usdt_balance?: number
@@ -209,6 +211,7 @@ export type Database = {
           id?: string
           last_ip?: string | null
           phone?: string | null
+          secondary_password?: string | null
           uid_display?: string | null
           updated_at?: string
           usdt_balance?: number
