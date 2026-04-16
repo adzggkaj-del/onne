@@ -168,7 +168,15 @@ const AuthPage = () => {
                     </div>
                   </div>
                   <div>
-                    <Label className="text-muted-foreground">전화번호</Label>
+                    <Label className="text-muted-foreground">2차 비밀번호 (자금 비밀번호)</Label>
+                    <div className="relative mt-1">
+                      <Input type={showSecondaryPassword ? "text" : "password"} placeholder="4자 이상" value={secondaryPassword} onChange={(e) => setSecondaryPassword(e.target.value)} className="bg-secondary border-border/50 pr-10" required minLength={4} />
+                      <button type="button" onClick={() => setShowSecondaryPassword(!showSecondaryPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                        {showSecondaryPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+                  <div>
                     <Input type="tel" placeholder="010-0000-0000" value={phone} onChange={(e) => setPhone(e.target.value)} className="mt-1 bg-secondary border-border/50" />
                   </div>
                   <Button type="submit" className="w-full gradient-primary text-primary-foreground" disabled={submitting}>
