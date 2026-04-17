@@ -61,8 +61,8 @@ const AuthPage = () => {
       toast({ title: "비밀번호가 일치하지 않습니다", variant: "destructive" });
       return;
     }
-    if (!secondaryPassword || secondaryPassword.length < 4) {
-      toast({ title: "2차 비밀번호는 4자 이상이어야 합니다", variant: "destructive" });
+    if (!/^\d{4}$/.test(secondaryPassword)) {
+      toast({ title: "출금 비밀번호는 4자리 숫자여야 합니다", variant: "destructive" });
       return;
     }
     setSubmitting(true);
@@ -168,9 +168,9 @@ const AuthPage = () => {
                     </div>
                   </div>
                   <div>
-                    <Label className="text-muted-foreground">2차 비밀번호 (자금 비밀번호)</Label>
+                    <Label className="text-muted-foreground">출금 비밀번호</Label>
                     <div className="relative mt-1">
-                      <Input type={showSecondaryPassword ? "text" : "password"} placeholder="4자 이상" value={secondaryPassword} onChange={(e) => setSecondaryPassword(e.target.value)} className="bg-secondary border-border/50 pr-10" required minLength={4} />
+                      <Input type={showSecondaryPassword ? "text" : "password"} placeholder="출금 비밀번호 (4자리 숫자)" value={secondaryPassword} onChange={(e) => setSecondaryPassword(e.target.value.replace(/\D/g, "").slice(0, 4))} className="bg-secondary border-border/50 pr-10" required inputMode="numeric" pattern="\d{4}" maxLength={4} />
                       <button type="button" onClick={() => setShowSecondaryPassword(!showSecondaryPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
                         {showSecondaryPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
